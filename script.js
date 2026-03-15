@@ -1,18 +1,40 @@
-function addTask(){
+let tasks = JSON.parse(localStorage.getItem("tasks")) || []
 
-let input = document.getElementById("taskInput")
-let task = input.value
+function renderTasks() {
+    let list = document.getElementById("taskList")
+    list.innerHTML = ""
 
-if(task === "") return
+    tasks.forEach((task, index) => {
+        let li = document.createElement("li")
+        li.textContent = task
 
-let li = document.createElement("li")
-li.textContent = task
+        li.onclick = function() {
+            tasks.splice(index, 1)
+            saveTasks()
+            renderTasks()
+        }
 
-li.onclick = function(){
-li.remove()
+        list.appendChild(li)
+    })
 }
 
-document.getElementById("taskList").appendChild(li)
+function addTask() {
 
-input.value = ""
+    let input = document.getElementById("taskInput")
+    let task = input.value
+
+    if(task === "") return
+
+    tasks.push(task)
+
+    saveTasks()
+    renderTasks()
+
+    input.value = ""
 }
+
+function saveTasks(){
+    localStorage.setItem("tasks", JSON.stringify(tasks))
+}
+
+renderTasks()
