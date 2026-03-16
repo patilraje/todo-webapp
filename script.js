@@ -1,5 +1,6 @@
 let tasks = JSON.parse(localStorage.getItem("tasks")) || []
 
+// Style for completed tasks 
 function renderTasks() {
 
     let list = document.getElementById("taskList")
