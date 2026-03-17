@@ -1,6 +1,7 @@
 let tasks = JSON.parse(localStorage.getItem("tasks")) || []
 
-// Style for completed tasks 
+
+
 function renderTasks() {
 
     let list = document.getElementById("taskList")
@@ -37,8 +38,22 @@ function renderTasks() {
         li.appendChild(span)
 
         list.appendChild(li)
+
     })
+
+    let remaining = tasks.filter(task => !task.completed).length
+
+    document.getElementById("taskCount").textContent =
+        remaining === 1 ? "1 task remaining" : remaining + " tasks remaining"
 }
+
+
+
+
+
+
+
+
 
 function addTask(){
 
