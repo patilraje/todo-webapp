@@ -50,11 +50,6 @@ function renderTasks() {
 
 
 
-
-
-
-
-
 function addTask(){
 
     let input = document.getElementById("taskInput")
@@ -71,6 +66,14 @@ function addTask(){
 
     input.value=""
 }
+
+// Add task when Enter key is pressed
+document.getElementById("taskInput").addEventListener("keypress", function(event){
+    if(event.key === "Enter"){
+        addTask();
+    }
+});
+
 
 function saveTasks(){
     localStorage.setItem("tasks", JSON.stringify(tasks))
