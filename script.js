@@ -67,8 +67,8 @@ function addTask(){
     input.value=""
 }
 
-// Add task when Enter key is pressed
-document.getElementById("taskInput").addEventListener("keypress", function(event){
+// Add task when Enter key is pressed (fixed)
+document.getElementById("taskInput").addEventListener("keydown", function(event){
     if(event.key === "Enter"){
         addTask();
     }
