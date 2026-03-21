@@ -86,4 +86,10 @@ function saveTasks(){
     localStorage.setItem("tasks", JSON.stringify(tasks))
 }
 
+function clearCompleted(){
+    tasks = tasks.filter(task => !task.completed)
+    saveTasks()
+    renderTasks()
+}
+
 renderTasks()
