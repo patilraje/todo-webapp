@@ -9,7 +9,7 @@ function renderTasks() {
 
         let li = document.createElement("li")
 
-        // Checkbox
+        // ✅ Checkbox
         let checkbox = document.createElement("input")
         checkbox.type = "checkbox"
         checkbox.checked = task.completed
@@ -20,53 +20,48 @@ function renderTasks() {
             renderTasks()
         }
 
-        // Task text
+        // ✅ Task text
         let span = document.createElement("span")
         span.textContent = task.text
+        span.style.flex = "1"
+        span.style.cursor = "pointer"
+        span.style.userSelect = "none"
 
-    if(task.completed){
-    span.classList.add("completed")
-}
-
-// ✏️ DOUBLE CLICK TO EDIT (FIXED)
-span.addEventListener("dblclick", function(){
-
-    let input = document.createElement("input")
-    input.type = "text"
-    input.value = task.text
-
-    span.replaceWith(input)   // ✅ FIX HERE
-    input.focus()
-
-    // Save function (reuse)
-    function saveEdit(){
-        let newText = input.value.trim()
-        if(newText !== ""){
-            tasks[index].text = newText
+        if(task.completed){
+            span.classList.add("completed")
         }
-        saveTasks()
-        renderTasks()
-    }
 
-    // Save on Enter
-    input.addEventListener("keydown", function(event){
-        if(event.key === "Enter"){
-            saveEdit()
-        }
-    })
+        // ✅ DOUBLE CLICK TO EDIT (WORKING)
+        span.addEventListener("dblclick", function(e){
 
-    // Save on click outside
-    input.addEventListener("blur", saveEdit)
-})
+            e.preventDefault()
 
+            let input = document.createElement("input")
+            input.type = "text"
+            input.value = task.text
 
+            span.replaceWith(input)
+            input.focus()
 
-        // ❌ Remove click delete from text (better UX)
-        // span.onclick = function(){ ... }
+            function saveEdit(){
+                let newText = input.value.trim()
+                tasks[index].text = newText || task.text
+                saveTasks()
+                renderTasks()
+            }
 
-        // 🗑️ Delete button (NEW FEATURE)
+            input.addEventListener("keydown", function(event){
+                if(event.key === "Enter"){
+                    saveEdit()
+                }
+            })
+
+            input.addEventListener("blur", saveEdit)
+        })
+
+        // ✅ Delete button
         let deleteBtn = document.createElement("button")
-        deleteBtn.textContent = "❌"
+        deleteBtn.textContent = "🗑️"
 
         deleteBtn.onclick = function(){
             tasks.splice(index, 1)
@@ -81,13 +76,14 @@ span.addEventListener("dblclick", function(){
         list.appendChild(li)
     })
 
-    // Task counter
+    // ✅ Task counter
     let remaining = tasks.filter(task => !task.completed).length
 
     document.getElementById("taskCount").textContent =
         remaining === 1 ? "1 task remaining" : remaining + " tasks remaining"
 }
 
+// ✅ Add task
 function addTask(){
 
     let input = document.getElementById("taskInput")
@@ -106,7 +102,7 @@ function addTask(){
     input.value = ""
 }
 
-// FIXED ENTER KEY (runs after page loads)
+// ✅ Enter key support
 document.addEventListener("DOMContentLoaded", function() {
     document.getElementById("taskInput").addEventListener("keydown", function(event){
         if(event.key === "Enter"){
@@ -115,14 +111,17 @@ document.addEventListener("DOMContentLoaded", function() {
     })
 })
 
+// ✅ Save tasks
 function saveTasks(){
     localStorage.setItem("tasks", JSON.stringify(tasks))
 }
 
+// ✅ Clear completed
 function clearCompleted(){
     tasks = tasks.filter(task => !task.completed)
     saveTasks()
     renderTasks()
 }
 
+// ✅ Initial render
 renderTasks()
