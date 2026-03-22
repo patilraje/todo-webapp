@@ -29,7 +29,7 @@ function renderTasks() {
 }
 
 // ✏️ DOUBLE CLICK TO EDIT (FIXED)
-span.ondblclick = function(){
+ span.addEventListener("dblclick", function(){
 
     let input = document.createElement("input")
     input.type = "text"
@@ -58,6 +58,7 @@ span.ondblclick = function(){
     // Save on click outside
     input.addEventListener("blur", saveEdit)
 }
+
 
 
         // ❌ Remove click delete from text (better UX)
