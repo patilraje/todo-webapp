@@ -29,7 +29,7 @@ function renderTasks() {
 }
 
 // ✏️ DOUBLE CLICK TO EDIT (FIXED)
- span.addEventListener("dblclick", function(){
+span.addEventListener("dblclick", function(){
 
     let input = document.createElement("input")
     input.type = "text"
