@@ -24,40 +24,41 @@ function renderTasks() {
         let span = document.createElement("span")
         span.textContent = task.text
 
-if(task.completed){
+    if(task.completed){
     span.classList.add("completed")
 }
 
-// ✏️ DOUBLE CLICK TO EDIT (NEW FEATURE)
+// ✏️ DOUBLE CLICK TO EDIT (FIXED)
 span.ondblclick = function(){
 
     let input = document.createElement("input")
     input.type = "text"
     input.value = task.text
 
-    li.replaceChild(input, span)
+    span.replaceWith(input)   // ✅ FIX HERE
     input.focus()
+
+    // Save function (reuse)
+    function saveEdit(){
+        let newText = input.value.trim()
+        if(newText !== ""){
+            tasks[index].text = newText
+        }
+        saveTasks()
+        renderTasks()
+    }
 
     // Save on Enter
     input.addEventListener("keydown", function(event){
         if(event.key === "Enter"){
-            tasks[index].text = input.value.trim() || task.text
-            saveTasks()
-            renderTasks()
+            saveEdit()
         }
     })
 
-    // Save if user clicks away
-    input.addEventListener("blur", function(){
-        tasks[index].text = input.value.trim() || task.text
-        saveTasks()
-        renderTasks()
-    })
+    // Save on click outside
+    input.addEventListener("blur", saveEdit)
 }
 
-        if(task.completed){
-            span.classList.add("completed")
-        }
 
         // ❌ Remove click delete from text (better UX)
         // span.onclick = function(){ ... }
