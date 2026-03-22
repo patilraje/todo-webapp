@@ -57,7 +57,7 @@ function renderTasks() {
 
     // Save on click outside
     input.addEventListener("blur", saveEdit)
-}
+})
 
 
 
