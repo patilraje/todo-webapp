@@ -24,6 +24,37 @@ function renderTasks() {
         let span = document.createElement("span")
         span.textContent = task.text
 
+if(task.completed){
+    span.classList.add("completed")
+}
+
+// ✏️ DOUBLE CLICK TO EDIT (NEW FEATURE)
+span.ondblclick = function(){
+
+    let input = document.createElement("input")
+    input.type = "text"
+    input.value = task.text
+
+    li.replaceChild(input, span)
+    input.focus()
+
+    // Save on Enter
+    input.addEventListener("keydown", function(event){
+        if(event.key === "Enter"){
+            tasks[index].text = input.value.trim() || task.text
+            saveTasks()
+            renderTasks()
+        }
+    })
+
+    // Save if user clicks away
+    input.addEventListener("blur", function(){
+        tasks[index].text = input.value.trim() || task.text
+        saveTasks()
+        renderTasks()
+    })
+}
+
         if(task.completed){
             span.classList.add("completed")
         }
