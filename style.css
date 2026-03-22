@@ -20,3 +20,7 @@ margin:10px;
     text-decoration: line-through;
     color: gray;
 }
+
+span {
+    cursor: pointer;
+}
