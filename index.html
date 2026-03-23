@@ -1,28 +1,25 @@
-<!DOCTYPE html>
-<html>
-<head>
-<title>Todo App</title>
-<link rel="stylesheet" href="style.css">
-</head>
-
 <body>
 
-<h1>My Todo List</h1>
+    <button onclick="toggleDarkMode()">🌙 Toggle Dark Mode</button>
 
-<button onclick="toggleDarkMode()">🌙 Toggle Dark Mode</button>
-<input type="text" id="taskInput" placeholder="Add a new task">
-<button onclick="addTask()">Add</button>
-<p id="taskCount"></p>
-<button onclick="clearCompleted()">Clear Completed</button>
-<ul id="taskList"></ul>
+    <h2>My Todo App</h2>
 
-<div>
-    <button onclick="setFilter('all')">All</button>
-    <button onclick="setFilter('active')">Active</button>
-    <button onclick="setFilter('completed')">Completed</button>
-</div>
+    <input type="text" id="taskInput" placeholder="Add a task">
+    <button onclick="addTask()">Add</button>
 
-<script src="script.js"></script>
+    <button onclick="clearCompleted()">Clear Completed</button>
+
+    <!-- FILTER BUTTONS -->
+    <div id="filters">
+        <button onclick="setFilter('all')">All</button>
+        <button onclick="setFilter('active')">Active</button>
+        <button onclick="setFilter('completed')">Completed</button>
+    </div>
+
+    <ul id="taskList"></ul>
+
+    <p id="taskCount"></p>
+
+    <script src="script.js"></script>
 
 </body>
-</html>
