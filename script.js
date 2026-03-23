@@ -1,4 +1,5 @@
 let tasks = JSON.parse(localStorage.getItem("tasks")) || []
+let currentFilter = "all"
 
 function renderTasks() {
 
@@ -6,6 +7,9 @@ function renderTasks() {
     list.innerHTML = ""
 
     tasks.forEach((task, index) => {
+
+        if(currentFilter === "active" && task.completed) return
+        if(currentFilter === "completed" && !task.completed) return
 
         let li = document.createElement("li")
 
@@ -125,6 +129,12 @@ function clearCompleted(){
 
 function toggleDarkMode(){
     document.body.classList.toggle("dark-mode")
+}
+
+
+function setFilter(filter){
+    currentFilter = filter
+    renderTasks()
 }
 
 // ✅ Initial render
