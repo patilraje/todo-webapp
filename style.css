@@ -24,3 +24,25 @@ margin:10px;
 span {
     cursor: pointer;
 }
+
+/* 🌙 Dark Mode Styles */
+.dark-mode {
+    background-color: #121212;
+    color: white;
+}
+
+.dark-mode li {
+    background-color: #1e1e1e;
+}
+
+.dark-mode input {
+    background-color: #333;
+    color: white;
+    border: 1px solid #555;
+}
+
+.dark-mode button {
+    background-color: #333;
+    color: white;
+    border: 1px solid #555;
+}
