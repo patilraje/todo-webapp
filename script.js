@@ -26,6 +26,19 @@ function renderTasks() {
 
         // ✅ Task text
         let span = document.createElement("span")
+        let dateSpan = document.createElement("small")
+
+        if(task.dueDate){
+        dateSpan.textContent = " (" + task.dueDate + ")"
+        dateSpan.style.marginLeft = "10px"
+     }
+
+        li.appendChild(span)
+        li.appendChild(dateSpan)
+        li.appendChild(deleteBtn)
+
+
+
         span.textContent = task.text
         span.style.flex = "1"
         span.style.cursor = "pointer"
@@ -87,24 +100,31 @@ function renderTasks() {
         remaining === 1 ? "1 task remaining" : remaining + " tasks remaining"
 }
 
+
 // ✅ Add task
 function addTask(){
 
     let input = document.getElementById("taskInput")
+    let dateInput = document.getElementById("dueDate")
+
     let text = input.value.trim()
+    let dueDate = dateInput.value
 
     if(text === "") return
 
     tasks.push({
         text: text,
-        completed: false
+        completed: false,
+        dueDate: dueDate
     })
 
     saveTasks()
     renderTasks()
 
     input.value = ""
+    dateInput.value = ""
 }
+
 
 // ✅ Enter key support
 document.addEventListener("DOMContentLoaded", function() {
@@ -126,6 +146,10 @@ function clearCompleted(){
     saveTasks()
     renderTasks()
 }
+
+
+
+
 
 function toggleDarkMode(){
     document.body.classList.toggle("dark-mode")
