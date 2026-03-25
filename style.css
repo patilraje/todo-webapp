@@ -41,3 +41,8 @@ body.dark-mode button {
 body.dark-mode li {
     background-color: #1e1e1e;
 }
+
+.overdue {
+    color: red;
+    font-weight: bold;
+}
