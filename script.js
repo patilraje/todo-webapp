@@ -104,7 +104,8 @@ if(task.dueDate && !task.completed){
     let remaining = total - completed
 
     document.getElementById("taskCount").textContent =
-        `${remaining} remaining | ${total} total | ${completed} completed`
+    `${remaining} remaining | ${total} total | ${completed} completed`
+}
 
 
 // ✅ Add task
