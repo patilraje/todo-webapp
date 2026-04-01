@@ -115,7 +115,12 @@ function addTask(){
     let dateInput = document.getElementById("dueDate")
 
     let text = input.value.trim()
-    let dueDate = dateInput.value
+
+    // ✅ SAFE FIX
+    let dueDate = ""
+    if(dateInput){
+        dueDate = dateInput.value
+    }
 
     if(text === "") return
 
@@ -129,9 +134,8 @@ function addTask(){
     renderTasks()
 
     input.value = ""
-    dateInput.value = ""
+    if(dateInput) dateInput.value = ""
 }
-
 
 // ✅ Enter key support
 document.addEventListener("DOMContentLoaded", function() {
