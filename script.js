@@ -99,11 +99,12 @@ if(task.dueDate && !task.completed){
 })
 
     // ✅ Task counter
-    let remaining = tasks.filter(task => !task.completed).length
+    let total = tasks.length
+    let completed = tasks.filter(task => task.completed).length
+    let remaining = total - completed
 
     document.getElementById("taskCount").textContent =
-        remaining === 1 ? "1 task remaining" : remaining + " tasks remaining"
-}
+        `${remaining} remaining | ${total} total | ${completed} completed`
 
 
 // ✅ Add task
