@@ -6,6 +6,14 @@ function renderTasks() {
     let list = document.getElementById("taskList")
     list.innerHTML = ""
 
+    if(tasks.length === 0){
+    let emptyMsg = document.createElement("p")
+    emptyMsg.textContent = "No tasks yet 🚀"
+    emptyMsg.style.opacity = "0.6"
+
+    list.appendChild(emptyMsg)
+    return
+    }
     
     tasks.forEach((task, index) => {
 
