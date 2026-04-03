@@ -46,3 +46,9 @@ body.dark-mode li {
     color: red;
     font-weight: bold;
 }
+
+.active-filter {
+    background-color: #333;
+    color: white;
+    font-weight: bold;
+}

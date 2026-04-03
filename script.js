@@ -177,8 +177,18 @@ function toggleDarkMode(){
 
 function setFilter(filter){
     currentFilter = filter
+
+    // Remove active class from all buttons
+    document.getElementById("filter-all").classList.remove("active-filter")
+    document.getElementById("filter-active").classList.remove("active-filter")
+    document.getElementById("filter-completed").classList.remove("active-filter")
+
+    // Add active class to selected
+    document.getElementById("filter-" + filter).classList.add("active-filter")
+
     renderTasks()
 }
+
 
 // ✅ Initial render
 renderTasks()
@@ -187,3 +197,5 @@ renderTasks()
 if(localStorage.getItem("darkMode") === "enabled"){
     document.body.classList.add("dark-mode")
 }
+
+document.getElementById("filter-all").classList.add("active-filter")
