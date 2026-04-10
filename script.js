@@ -167,6 +167,14 @@ function clearCompleted(){
 }
 
 
+function markAllComplete(){
+    tasks.forEach(task => {
+        task.completed = true
+    })
+
+    saveTasks()
+    renderTasks()
+}
 
 
 
