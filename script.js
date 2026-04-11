@@ -178,8 +178,12 @@ function markAllComplete(){
 
 
 
-function toggleDarkMode(){
+function toggleDarkMode() {
     document.body.classList.toggle("dark-mode")
+    localStorage.setItem(
+        "darkMode",
+        document.body.classList.contains("dark-mode") ? "enabled" : "disabled"
+    )
 }
 
 
@@ -198,12 +202,10 @@ function setFilter(filter){
 }
 
 
-// ✅ Initial render
-renderTasks()
-
-// Load dark mode preference
-if(localStorage.getItem("darkMode") === "enabled"){
+if (localStorage.getItem("darkMode") === "enabled") {
     document.body.classList.add("dark-mode")
 }
+
+renderTasks()
 
 document.getElementById("filter-all").classList.add("active-filter")
