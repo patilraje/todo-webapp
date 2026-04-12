@@ -48,12 +48,12 @@ body.dark-mode li {
 }
 
 .due-today {
-    color: #e65100;
+    color: #1565c0;
     font-weight: bold;
 }
 
 body.dark-mode .due-today {
-    color: #ffb74d;
+    color: #64b5f6;
 }
 
 body.dark-mode .overdue {
