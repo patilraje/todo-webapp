@@ -44,14 +44,14 @@ function renderTasks() {
         span.classList.add("completed")
     }
 
-    // 🔴 Highlight overdue tasks
-if(task.dueDate && !task.completed){
-    let today = new Date().toISOString().split("T")[0]
-
-    if(task.dueDate < today){
-        span.classList.add("overdue")
+    if (task.dueDate && !task.completed) {
+        const today = new Date().toISOString().split("T")[0]
+        if (task.dueDate < today) {
+            span.classList.add("overdue")
+        } else if (task.dueDate === today) {
+            span.classList.add("due-today")
+        }
     }
-}
 
     // Due date
     let dateSpan = document.createElement("small")

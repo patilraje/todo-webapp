@@ -43,8 +43,21 @@ body.dark-mode li {
 }
 
 .overdue {
-    color: red;
+    color: #c62828;
     font-weight: bold;
+}
+
+.due-today {
+    color: #e65100;
+    font-weight: bold;
+}
+
+body.dark-mode .due-today {
+    color: #ffb74d;
+}
+
+body.dark-mode .overdue {
+    color: #ef9a9a;
 }
 
 .active-filter {
