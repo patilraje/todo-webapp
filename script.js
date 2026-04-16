@@ -20,6 +20,8 @@ function renderTasks() {
     emptyMsg.style.opacity = "0.6"
 
     list.appendChild(emptyMsg)
+    document.getElementById("taskCount").textContent =
+        "0 remaining | 0 total | 0 completed"
     return
     }
     
