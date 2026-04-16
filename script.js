@@ -184,6 +184,17 @@ function markAllComplete(){
     renderTasks()
 }
 
+function clearAllTasks(){
+    if(tasks.length === 0) return
+
+    const confirmed = window.confirm("Clear all tasks?")
+    if(!confirmed) return
+
+    tasks = []
+    saveTasks()
+    renderTasks()
+}
+
 
 
 function toggleDarkMode() {
