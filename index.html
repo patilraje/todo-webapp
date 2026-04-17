@@ -26,11 +26,35 @@
             <button onclick="clearAllTasks()">Clear All</button>
         </section>
 
+        <section class="search-row">
+            <input
+                type="text"
+                id="searchInput"
+                placeholder="Search tasks..."
+                oninput="setSearchQuery(this.value)"
+            >
+        </section>
+
         <div id="filters">
             <button id="filter-all" onclick="setFilter('all')">All</button>
             <button id="filter-active" onclick="setFilter('active')">Active</button>
             <button id="filter-completed" onclick="setFilter('completed')">Completed</button>
         </div>
+
+        <section class="stats-row">
+            <div class="stat-chip">
+                <span>Total</span>
+                <strong id="statTotal">0</strong>
+            </div>
+            <div class="stat-chip">
+                <span>Open</span>
+                <strong id="statOpen">0</strong>
+            </div>
+            <div class="stat-chip">
+                <span>Done</span>
+                <strong id="statDone">0</strong>
+            </div>
+        </section>
 
         <section class="progress-section">
             <div class="progress-header">
@@ -44,6 +68,8 @@
 
         <ul id="taskList"></ul>
         <p id="taskCount"></p>
+
+        <p class="shortcut-hint">Tips: press Enter to add tasks and double-click a task to edit.</p>
     </main>
 </div>
 

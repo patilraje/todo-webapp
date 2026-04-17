@@ -1,5 +1,6 @@
 let tasks = JSON.parse(localStorage.getItem("tasks")) || []
 let currentFilter = "all"
+let searchQuery = ""
 
 function todayLocalISO() {
     const d = new Date()
@@ -14,6 +15,9 @@ function renderTasks() {
     let list = document.getElementById("taskList")
     let progressFill = document.getElementById("progressFill")
     let progressLabel = document.getElementById("progressLabel")
+    let statTotal = document.getElementById("statTotal")
+    let statOpen = document.getElementById("statOpen")
+    let statDone = document.getElementById("statDone")
     list.innerHTML = ""
 
     let total = tasks.length
@@ -23,6 +27,9 @@ function renderTasks() {
 
     progressFill.style.width = `${progressPercent}%`
     progressLabel.textContent = `${progressPercent}%`
+    statTotal.textContent = String(total)
+    statOpen.textContent = String(remaining)
+    statDone.textContent = String(completed)
 
     if(tasks.length === 0){
     let emptyMsg = document.createElement("p")
@@ -39,6 +46,7 @@ function renderTasks() {
 
     if(currentFilter === "active" && task.completed) return
     if(currentFilter === "completed" && !task.completed) return
+    if(searchQuery && !task.text.toLowerCase().includes(searchQuery)) return
 
     let li = document.createElement("li")
 
@@ -224,6 +232,11 @@ function setFilter(filter){
     // Add active class to selected
     document.getElementById("filter-" + filter).classList.add("active-filter")
 
+    renderTasks()
+}
+
+function setSearchQuery(query){
+    searchQuery = query.trim().toLowerCase()
     renderTasks()
 }
 
