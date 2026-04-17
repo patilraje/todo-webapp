@@ -32,6 +32,16 @@
             <button id="filter-completed" onclick="setFilter('completed')">Completed</button>
         </div>
 
+        <section class="progress-section">
+            <div class="progress-header">
+                <span>Today's Progress</span>
+                <strong id="progressLabel">0%</strong>
+            </div>
+            <div class="progress-track">
+                <div id="progressFill" class="progress-fill"></div>
+            </div>
+        </section>
+
         <ul id="taskList"></ul>
         <p id="taskCount"></p>
     </main>

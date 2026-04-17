@@ -76,6 +76,35 @@ button:hover {
     margin: 10px 0 0;
 }
 
+.progress-section {
+    margin: 8px auto 14px;
+    max-width: 520px;
+    text-align: left;
+}
+
+.progress-header {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 6px;
+    font-size: 14px;
+}
+
+.progress-track {
+    width: 100%;
+    height: 12px;
+    border-radius: 999px;
+    background: #e6ebf5;
+    overflow: hidden;
+}
+
+.progress-fill {
+    width: 0;
+    height: 100%;
+    border-radius: inherit;
+    background: linear-gradient(90deg, #10b981 0%, #34d399 100%);
+    transition: width 0.25s ease;
+}
+
 li {
     margin: 10px 0;
     padding: 12px;
@@ -117,6 +146,10 @@ body.dark-mode button {
 body.dark-mode li {
     background-color: #1f2c42;
     border-color: #2f4059;
+}
+
+body.dark-mode .progress-track {
+    background: #2a3a55;
 }
 
 .overdue {

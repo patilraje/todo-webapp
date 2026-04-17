@@ -12,7 +12,17 @@ function todayLocalISO() {
 function renderTasks() {
 
     let list = document.getElementById("taskList")
+    let progressFill = document.getElementById("progressFill")
+    let progressLabel = document.getElementById("progressLabel")
     list.innerHTML = ""
+
+    let total = tasks.length
+    let completed = tasks.filter(task => task.completed).length
+    let remaining = total - completed
+    let progressPercent = total === 0 ? 0 : Math.round((completed / total) * 100)
+
+    progressFill.style.width = `${progressPercent}%`
+    progressLabel.textContent = `${progressPercent}%`
 
     if(tasks.length === 0){
     let emptyMsg = document.createElement("p")
@@ -115,11 +125,6 @@ function renderTasks() {
 
     list.appendChild(li)
 })
-
-    // ✅ Task counter
-    let total = tasks.length
-    let completed = tasks.filter(task => task.completed).length
-    let remaining = total - completed
 
     document.getElementById("taskCount").textContent =
         `${remaining} remaining | ${total} total | ${completed} completed`
