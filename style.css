@@ -1,24 +1,95 @@
-body{
-font-family: Arial;
-text-align:center;
-margin-top:50px;
+* {
+    box-sizing: border-box;
 }
 
-input{
-padding:10px;
+body {
+    margin: 0;
+    font-family: "Inter", Arial, sans-serif;
+    background: linear-gradient(180deg, #f5f7fb 0%, #e7ecf5 100%);
+    color: #222;
 }
 
-button{
-padding:10px;
+.app-shell {
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 24px;
 }
 
-li{
-margin:10px;
+.todo-card {
+    width: min(760px, 100%);
+    background: #fff;
+    border-radius: 16px;
+    box-shadow: 0 18px 45px rgba(28, 39, 66, 0.12);
+    padding: 26px;
+    text-align: center;
+}
+
+h1 {
+    margin-top: 8px;
+    margin-bottom: 20px;
+}
+
+.input-row,
+.actions-row,
+#filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    justify-content: center;
+    margin-bottom: 14px;
+}
+
+input,
+button {
+    border-radius: 10px;
+    border: 1px solid #d6ddeb;
+    padding: 10px 12px;
+    font-size: 14px;
+}
+
+#taskInput {
+    min-width: 230px;
+}
+
+button {
+    cursor: pointer;
+    background: #fff;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+button:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(22, 33, 56, 0.1);
+}
+
+.theme-toggle {
+    position: fixed;
+    right: 16px;
+    top: 16px;
+}
+
+#taskList {
+    list-style: none;
+    padding: 0;
+    margin: 10px 0 0;
+}
+
+li {
+    margin: 10px 0;
+    padding: 12px;
+    background: #f8faff;
+    border: 1px solid #e3e9f4;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
 }
 
 .completed {
     text-decoration: line-through;
-    color: gray;
+    color: #7d879a;
 }
 
 span {
@@ -27,19 +98,25 @@ span {
 
 /* 🌙 Dark Mode Styles */
 body.dark-mode {
-    background-color: #121212;
+    background: linear-gradient(180deg, #111827 0%, #0b1220 100%);
     color: white;
+}
+
+body.dark-mode .todo-card {
+    background: #162032;
+    box-shadow: 0 22px 40px rgba(0, 0, 0, 0.4);
 }
 
 body.dark-mode input,
 body.dark-mode button {
-    background-color: #333;
+    background-color: #223148;
     color: white;
-    border: 1px solid #555;
+    border: 1px solid #3a4a61;
 }
 
 body.dark-mode li {
-    background-color: #1e1e1e;
+    background-color: #1f2c42;
+    border-color: #2f4059;
 }
 
 .overdue {
@@ -64,4 +141,8 @@ body.dark-mode .overdue {
     background-color: #333;
     color: white;
     font-weight: bold;
+}
+
+body.dark-mode .active-filter {
+    background-color: #4d6183;
 }
