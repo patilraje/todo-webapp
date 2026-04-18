@@ -82,6 +82,23 @@ button:hover {
     margin: 10px 0 0;
 }
 
+.empty-filter-msg {
+    margin: 16px 0;
+    padding: 14px 16px;
+    border-radius: 12px;
+    background: #f0f4ff;
+    border: 1px solid #d6e0f5;
+    color: #4a5568;
+    font-size: 14px;
+    line-height: 1.45;
+}
+
+body.dark-mode .empty-filter-msg {
+    background: #1d2a3f;
+    border-color: #334866;
+    color: #c5d0e3;
+}
+
 .progress-section {
     margin: 8px auto 14px;
     max-width: 520px;

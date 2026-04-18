@@ -10,6 +10,13 @@ function todayLocalISO() {
     return `${y}-${m}-${day}`
 }
 
+function taskMatchesFilters(task) {
+    if (currentFilter === "active" && task.completed) return false
+    if (currentFilter === "completed" && !task.completed) return false
+    if (searchQuery && !task.text.toLowerCase().includes(searchQuery)) return false
+    return true
+}
+
 function renderTasks() {
 
     let list = document.getElementById("taskList")
@@ -31,22 +38,33 @@ function renderTasks() {
     statOpen.textContent = String(remaining)
     statDone.textContent = String(completed)
 
-    if(tasks.length === 0){
-    let emptyMsg = document.createElement("p")
-    emptyMsg.textContent = "No tasks yet 🚀"
-    emptyMsg.style.opacity = "0.6"
+    if (tasks.length === 0) {
+        let emptyMsg = document.createElement("p")
+        emptyMsg.textContent = "No tasks yet 🚀"
+        emptyMsg.style.opacity = "0.6"
 
-    list.appendChild(emptyMsg)
-    document.getElementById("taskCount").textContent =
-        "0 remaining | 0 total | 0 completed"
-    return
+        list.appendChild(emptyMsg)
+        document.getElementById("taskCount").textContent =
+            "0 remaining | 0 total | 0 completed"
+        return
     }
-    
+
+    const visibleCount = tasks.filter(taskMatchesFilters).length
+    if (visibleCount === 0) {
+        let emptyMsg = document.createElement("p")
+        emptyMsg.className = "empty-filter-msg"
+        emptyMsg.textContent =
+            "No tasks match this filter or search. Try All, Active, or clear the search."
+
+        list.appendChild(emptyMsg)
+        document.getElementById("taskCount").textContent =
+            `${remaining} remaining | ${total} total | ${completed} completed`
+        return
+    }
+
     tasks.forEach((task, index) => {
 
-    if(currentFilter === "active" && task.completed) return
-    if(currentFilter === "completed" && !task.completed) return
-    if(searchQuery && !task.text.toLowerCase().includes(searchQuery)) return
+    if (!taskMatchesFilters(task)) return
 
     let li = document.createElement("li")
 
