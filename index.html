@@ -4,72 +4,212 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Todo App</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
 </head>
 
 <body>
+<div class="backdrop" aria-hidden="true">
+    <span class="blob blob-1"></span>
+    <span class="blob blob-2"></span>
+    <span class="blob blob-3"></span>
+</div>
+
 <div class="app-shell">
-    <button class="theme-toggle" onclick="toggleDarkMode()">🌙 Dark Mode</button>
+    <button class="theme-toggle" type="button" onclick="toggleDarkMode()" aria-label="Toggle dark mode">
+        <span class="theme-toggle-icon">🌙</span>
+    </button>
 
-    <main class="todo-card">
-        <h1>My Todo List</h1>
+    <main class="app-card">
+        <header class="app-header">
+            <div>
+                <p class="eyebrow">Stay on track</p>
+                <h1 class="app-title">My Todo List</h1>
+            </div>
+            <div class="ring" role="img" aria-labelledby="todayRingText">
+                <svg viewBox="0 0 64 64" width="72" height="72">
+                    <circle class="ring-track" cx="32" cy="32" r="26"></circle>
+                    <circle id="todayRingFill" class="ring-fill" cx="32" cy="32" r="26"></circle>
+                </svg>
+                <span id="todayRingText" class="ring-text">0%</span>
+            </div>
+        </header>
 
-        <section class="input-row">
-            <input type="text" id="taskInput" placeholder="Add a new task">
-            <input type="date" id="dueDate">
-            <button onclick="addTask()">Add</button>
-        </section>
-
-        <section class="actions-row">
-            <button onclick="clearCompleted()">Clear Completed</button>
-            <button onclick="markAllComplete()">Mark All Complete</button>
-            <button onclick="clearAllTasks()">Clear All</button>
-        </section>
-
-        <section class="search-row">
-            <input
-                type="text"
-                id="searchInput"
-                placeholder="Search tasks..."
-                oninput="setSearchQuery(this.value)"
+        <nav class="tab-bar" role="tablist" aria-label="App sections">
+            <button
+                type="button"
+                id="tab-today"
+                class="tab-button is-active"
+                role="tab"
+                aria-selected="true"
+                aria-controls="panel-today"
+                onclick="switchTab('today')"
             >
+                <svg viewBox="0 0 24 24" class="tab-icon" aria-hidden="true">
+                    <path d="M9 12l2 2 4-4"></path>
+                    <rect x="3.5" y="4.5" width="17" height="16" rx="4"></rect>
+                </svg>
+                Today
+            </button>
+            <button
+                type="button"
+                id="tab-planning"
+                class="tab-button"
+                role="tab"
+                aria-selected="false"
+                aria-controls="panel-planning"
+                onclick="switchTab('planning')"
+            >
+                <svg viewBox="0 0 24 24" class="tab-icon" aria-hidden="true">
+                    <rect x="3.5" y="5" width="17" height="15.5" rx="3.5"></rect>
+                    <path d="M3.5 10h17M8.5 3.5v3M15.5 3.5v3"></path>
+                </svg>
+                Planning
+            </button>
+        </nav>
+
+        <section id="panel-today" class="tab-panel is-active" role="tabpanel" aria-labelledby="tab-today">
+            <div class="today-header">
+                <div>
+                    <p class="eyebrow">Today</p>
+                    <h2 id="todayDateLabel"></h2>
+                </div>
+                <span id="todaySummary" class="pill"></span>
+            </div>
+
+            <form class="quick-add" onsubmit="quickAddToday(event)">
+                <input id="todayQuickAdd" type="text" placeholder="Add a general task..." aria-label="Add a general task">
+                <button class="primary-button" type="submit">Add</button>
+            </form>
+
+            <div id="todayList" class="today-list"></div>
+            <p class="shortcut-hint">Press Enter to add, double-click a general task to edit, and open Planning for the calendar.</p>
         </section>
 
-        <div id="filters">
-            <button id="filter-all" onclick="setFilter('all')">All</button>
-            <button id="filter-active" onclick="setFilter('active')">Active</button>
-            <button id="filter-completed" onclick="setFilter('completed')">Completed</button>
-        </div>
+        <section id="panel-planning" class="tab-panel" role="tabpanel" aria-labelledby="tab-planning" hidden>
+            <section class="planning-tools">
+                <div class="input-row">
+                    <input type="text" id="taskInput" placeholder="Add a new task">
+                    <input type="date" id="dueDate">
+                    <button class="primary-button" type="button" onclick="addTask()">Add</button>
+                </div>
 
-        <section class="stats-row">
-            <div class="stat-chip">
-                <span>Total</span>
-                <strong id="statTotal">0</strong>
-            </div>
-            <div class="stat-chip">
-                <span>Open</span>
-                <strong id="statOpen">0</strong>
-            </div>
-            <div class="stat-chip">
-                <span>Done</span>
-                <strong id="statDone">0</strong>
-            </div>
+                <section class="actions-row">
+                    <button type="button" onclick="clearCompleted()">Clear Completed</button>
+                    <button type="button" onclick="markAllComplete()">Mark All Complete</button>
+                    <button type="button" onclick="clearAllTasks()">Clear All</button>
+                </section>
+
+                <section class="search-row">
+                    <input
+                        type="text"
+                        id="searchInput"
+                        placeholder="Search tasks..."
+                        oninput="setSearchQuery(this.value)"
+                    >
+                </section>
+
+                <div id="filters">
+                    <button type="button" id="filter-all" onclick="setFilter('all')">All</button>
+                    <button type="button" id="filter-active" onclick="setFilter('active')">Active</button>
+                    <button type="button" id="filter-completed" onclick="setFilter('completed')">Completed</button>
+                </div>
+
+                <section class="stats-row">
+                    <div class="stat-chip stat-total">
+                        <span>Total</span>
+                        <strong id="statTotal">0</strong>
+                    </div>
+                    <div class="stat-chip stat-open">
+                        <span>Open</span>
+                        <strong id="statOpen">0</strong>
+                    </div>
+                    <div class="stat-chip stat-done">
+                        <span>Done</span>
+                        <strong id="statDone">0</strong>
+                    </div>
+                </section>
+
+                <section class="progress-section">
+                    <div class="progress-header">
+                        <span>General list progress</span>
+                        <strong id="progressLabel">0%</strong>
+                    </div>
+                    <div class="progress-track">
+                        <div id="progressFill" class="progress-fill"></div>
+                    </div>
+                </section>
+
+                <ul id="taskList"></ul>
+                <p id="taskCount" class="count-line"></p>
+            </section>
+
+            <section class="calendar-section">
+                <div class="calendar-heading">
+                    <div>
+                        <p class="eyebrow">Day planner</p>
+                        <h2>Calendar</h2>
+                    </div>
+                    <div class="calendar-nav">
+                        <button type="button" onclick="changeMonth(-1)" aria-label="Previous month">←</button>
+                        <button type="button" onclick="goToToday()">Today</button>
+                        <button type="button" onclick="changeMonth(1)" aria-label="Next month">→</button>
+                    </div>
+                </div>
+
+                <h3 id="calendarMonthLabel" class="month-label"></h3>
+                <div class="weekday-row" aria-hidden="true">
+                    <span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span>
+                    <span>Thu</span><span>Fri</span><span>Sat</span>
+                </div>
+                <div id="calendarGrid" class="calendar-grid" aria-label="Monthly calendar"></div>
+
+                <div class="day-planner">
+                    <div class="selected-day-heading">
+                        <div>
+                            <p class="eyebrow">Selected day</p>
+                            <h3 id="selectedDateLabel"></h3>
+                        </div>
+                        <strong id="dayProgressLabel" class="pill">0% complete</strong>
+                    </div>
+                    <div class="progress-track">
+                        <div id="dayProgressFill" class="progress-fill"></div>
+                    </div>
+
+                    <div class="planner-columns">
+                        <section class="planner-panel accent-flame">
+                            <div class="panel-heading">
+                                <div>
+                                    <h4>⚡ Daily non-negotiables</h4>
+                                    <p>These appear on every day.</p>
+                                </div>
+                            </div>
+                            <form class="planner-form" onsubmit="addNonNegotiable(event)">
+                                <input id="nonNegotiableInput" type="text" placeholder="e.g. Exercise for 30 minutes">
+                                <button class="primary-button" type="submit">Add daily</button>
+                            </form>
+                            <div id="nonNegotiableList" class="planner-list"></div>
+                        </section>
+
+                        <section class="planner-panel accent-sky">
+                            <div class="panel-heading">
+                                <div>
+                                    <h4>🗓️ Tasks for this day</h4>
+                                    <p>One-off plans for the selected date.</p>
+                                </div>
+                            </div>
+                            <form class="planner-form" onsubmit="addDayTask(event)">
+                                <input id="dayTaskInput" type="text" placeholder="Add a task for this day">
+                                <button class="primary-button" type="submit">Add task</button>
+                            </form>
+                            <div id="dayTaskList" class="planner-list"></div>
+                        </section>
+                    </div>
+                </div>
+            </section>
         </section>
-
-        <section class="progress-section">
-            <div class="progress-header">
-                <span>Today's Progress</span>
-                <strong id="progressLabel">0%</strong>
-            </div>
-            <div class="progress-track">
-                <div id="progressFill" class="progress-fill"></div>
-            </div>
-        </section>
-
-        <ul id="taskList"></ul>
-        <p id="taskCount"></p>
-
-        <p class="shortcut-hint">Tips: press Enter to add tasks and double-click a task to edit.</p>
     </main>
 </div>
 
