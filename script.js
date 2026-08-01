@@ -68,9 +68,8 @@ function getTodayMergedProgress() {
         Boolean(nonNegotiableCompletions[today]?.[item.id])
     ).length
     const plannedDone = planned.filter(task => task.completed).length
-    const generalDone = tasks.filter(task => task.completed).length
-    const total = nonNegotiables.length + planned.length + tasks.length
-    const completed = recurringDone + plannedDone + generalDone
+    const total = nonNegotiables.length + planned.length
+    const completed = recurringDone + plannedDone
 
     return {
         total,
@@ -226,7 +225,7 @@ function renderToday() {
         )
     )
 
-    const generalRows = tasks.map((task, index) => {
+    const bonusRows = tasks.map((task, index) => {
         let className = ""
         if (task.dueDate && !task.completed) {
             if (task.dueDate < today) className = "overdue"
@@ -288,11 +287,11 @@ function renderToday() {
         done: planned.filter(task => task.completed).length,
         empty: "Nothing scheduled for today yet."
     })
-    appendGroup(list, "General tasks", generalRows, {
-        icon: "📝",
+    appendGroup(list, "Bonus", bonusRows, {
+        icon: "⭐",
         accent: "group-mint",
         done: tasks.filter(task => task.completed).length,
-        empty: "Your general list is clear."
+        empty: "Extra credit for this week or two."
     })
 }
 
@@ -337,7 +336,7 @@ function renderTasks() {
     if (tasks.length === 0) {
         let emptyMsg = document.createElement("p")
         emptyMsg.className = "empty-filter-msg"
-        emptyMsg.textContent = "No tasks yet. Add one above or from the Today tab."
+        emptyMsg.textContent = "No bonus tasks yet. Add one above or from the Today tab."
         list.appendChild(emptyMsg)
         document.getElementById("taskCount").textContent =
             "0 remaining | 0 total | 0 completed"

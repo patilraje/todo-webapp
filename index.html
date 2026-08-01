@@ -80,18 +80,18 @@
             </div>
 
             <form class="quick-add" onsubmit="quickAddToday(event)">
-                <input id="todayQuickAdd" type="text" placeholder="Add a general task..." aria-label="Add a general task">
+                <input id="todayQuickAdd" type="text" placeholder="Add a bonus task..." aria-label="Add a bonus task">
                 <button class="primary-button" type="submit">Add</button>
             </form>
 
             <div id="todayList" class="today-list"></div>
-            <p class="shortcut-hint">Press Enter to add, double-click a general task to edit, and open Planning for the calendar.</p>
+            <p class="shortcut-hint">Press Enter to add a bonus task, double-click one to edit, and open Planning for the calendar.</p>
         </section>
 
         <section id="panel-planning" class="tab-panel" role="tabpanel" aria-labelledby="tab-planning" hidden>
             <section class="planning-tools">
                 <div class="input-row">
-                    <input type="text" id="taskInput" placeholder="Add a new task">
+                    <input type="text" id="taskInput" placeholder="Add a bonus task">
                     <input type="date" id="dueDate">
                     <button class="primary-button" type="button" onclick="addTask()">Add</button>
                 </div>
@@ -134,7 +134,7 @@
 
                 <section class="progress-section">
                     <div class="progress-header">
-                        <span>General list progress</span>
+                        <span>Bonus progress</span>
                         <strong id="progressLabel">0%</strong>
                     </div>
                     <div class="progress-track">
