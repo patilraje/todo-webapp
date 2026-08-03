@@ -18,6 +18,30 @@ function todayLocalISO() {
     return `${y}-${m}-${day}`
 }
 
+function getWeekStartSundayISO(date = new Date()) {
+    const d = new Date(date.getFullYear(), date.getMonth(), date.getDate())
+    d.setDate(d.getDate() - d.getDay())
+    return formatLocalISO(d)
+}
+
+function ensureBonusWeekReset() {
+    const weekStart = getWeekStartSundayISO()
+    const stored = localStorage.getItem("bonusWeekStart")
+
+    if (!stored) {
+        localStorage.setItem("bonusWeekStart", weekStart)
+        return
+    }
+
+    if (stored !== weekStart) {
+        tasks = []
+        saveTasks()
+        localStorage.setItem("bonusWeekStart", weekStart)
+    }
+}
+
+ensureBonusWeekReset()
+
 function taskMatchesFilters(task) {
     if (currentFilter === "active" && task.completed) return false
     if (currentFilter === "completed" && !task.completed) return false
@@ -78,9 +102,46 @@ function getTodayMergedProgress() {
     }
 }
 
+function moveNonNegotiable(id, direction) {
+    const index = nonNegotiables.findIndex(item => item.id === id)
+    if (index < 0) return
+
+    const target = index + direction
+    if (target < 0 || target >= nonNegotiables.length) return
+
+    const [item] = nonNegotiables.splice(index, 1)
+    nonNegotiables.splice(target, 0, item)
+    savePlannerData()
+    refreshAllViews()
+}
+
 function createTaskRow(text, completed, onToggle, onDelete, options = {}) {
     const row = document.createElement("div")
     row.className = "task-row"
+
+    if (options.reorder) {
+        const reorder = document.createElement("div")
+        reorder.className = "reorder-controls"
+
+        const upButton = document.createElement("button")
+        upButton.type = "button"
+        upButton.className = "reorder-button"
+        upButton.textContent = "↑"
+        upButton.setAttribute("aria-label", `Move ${text} up`)
+        upButton.disabled = !options.reorder.canMoveUp
+        upButton.addEventListener("click", options.reorder.onMoveUp)
+
+        const downButton = document.createElement("button")
+        downButton.type = "button"
+        downButton.className = "reorder-button"
+        downButton.textContent = "↓"
+        downButton.setAttribute("aria-label", `Move ${text} down`)
+        downButton.disabled = !options.reorder.canMoveDown
+        downButton.addEventListener("click", options.reorder.onMoveDown)
+
+        reorder.append(upButton, downButton)
+        row.appendChild(reorder)
+    }
 
     const label = document.createElement("label")
     const checkbox = document.createElement("input")
@@ -186,7 +247,7 @@ function renderToday() {
 
     list.innerHTML = ""
 
-    const recurringRows = nonNegotiables.map(item => {
+    const recurringRows = nonNegotiables.map((item, index) => {
         const completed = Boolean(nonNegotiableCompletions[today]?.[item.id])
         return createTaskRow(
             item.text,
@@ -203,6 +264,18 @@ function renderToday() {
                 nonNegotiables = nonNegotiables.filter(current => current.id !== item.id)
                 savePlannerData()
                 refreshAllViews()
+            },
+            {
+                reorder: {
+                    canMoveUp: index > 0,
+                    canMoveDown: index < nonNegotiables.length - 1,
+                    onMoveUp: function() {
+                        moveNonNegotiable(item.id, -1)
+                    },
+                    onMoveDown: function() {
+                        moveNonNegotiable(item.id, 1)
+                    }
+                }
             }
         )
     })
@@ -291,7 +364,7 @@ function renderToday() {
         icon: "⭐",
         accent: "group-mint",
         done: tasks.filter(task => task.completed).length,
-        empty: "Extra credit for this week or two."
+        empty: "Extra credit for this week. Resets every Sunday."
     })
 }
 
@@ -616,8 +689,8 @@ function renderCalendar() {
     }
 }
 
-function createPlannerRow(text, completed, onToggle, onDelete) {
-    return createTaskRow(text, completed, onToggle, onDelete)
+function createPlannerRow(text, completed, onToggle, onDelete, options = {}) {
+    return createTaskRow(text, completed, onToggle, onDelete, options)
 }
 
 function renderSelectedDay() {
@@ -645,7 +718,7 @@ function renderSelectedDay() {
     if (nonNegotiables.length === 0) {
         recurringList.appendChild(createPlannerEmpty("Add your first daily must-do above."))
     } else {
-        nonNegotiables.forEach(item => {
+        nonNegotiables.forEach((item, index) => {
             const completed = Boolean(
                 nonNegotiableCompletions[selectedDate]?.[item.id]
             )
@@ -666,6 +739,18 @@ function renderSelectedDay() {
                     )
                     savePlannerData()
                     refreshAllViews()
+                },
+                {
+                    reorder: {
+                        canMoveUp: index > 0,
+                        canMoveDown: index < nonNegotiables.length - 1,
+                        onMoveUp: function() {
+                            moveNonNegotiable(item.id, -1)
+                        },
+                        onMoveDown: function() {
+                            moveNonNegotiable(item.id, 1)
+                        }
+                    }
                 }
             ))
         })

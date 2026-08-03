@@ -521,6 +521,41 @@ input[type="checkbox"]:checked::after {
     background: rgba(239, 68, 68, 0.12);
 }
 
+.reorder-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    flex: 0 0 auto;
+}
+
+.reorder-button {
+    width: 26px;
+    height: 20px;
+    padding: 0;
+    display: grid;
+    place-items: center;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--surface-muted);
+    color: var(--text-muted);
+    font-size: 11px;
+    line-height: 1;
+    box-shadow: none;
+}
+
+.reorder-button:hover:not(:disabled) {
+    transform: none;
+    box-shadow: none;
+    color: var(--text);
+    border-color: var(--accent);
+    background: var(--accent-soft);
+}
+
+.reorder-button:disabled {
+    opacity: 0.35;
+    cursor: default;
+}
+
 .planner-empty,
 .empty-filter-msg,
 .today-empty {
