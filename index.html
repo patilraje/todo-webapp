@@ -68,6 +68,21 @@
                 </svg>
                 Planning
             </button>
+            <button
+                type="button"
+                id="tab-week"
+                class="tab-button"
+                role="tab"
+                aria-selected="false"
+                aria-controls="panel-week"
+                onclick="switchTab('week')"
+            >
+                <svg viewBox="0 0 24 24" class="tab-icon" aria-hidden="true">
+                    <path d="M4 19V9l4-2 4 3 4-3 4 2v10"></path>
+                    <path d="M4 19h16"></path>
+                </svg>
+                Week
+            </button>
         </nav>
 
         <section id="panel-today" class="tab-panel is-active" role="tabpanel" aria-labelledby="tab-today">
@@ -85,7 +100,7 @@
             </form>
 
             <div id="todayList" class="today-list"></div>
-            <p class="shortcut-hint">Bonus tasks reset every Sunday. Press Enter to add one, double-click to edit, and open Planning for the calendar.</p>
+            <p class="shortcut-hint">Bonus tasks reset every Monday. Press Enter to add one, double-click to edit, and open Planning for the calendar.</p>
         </section>
 
         <section id="panel-planning" class="tab-panel" role="tabpanel" aria-labelledby="tab-planning" hidden>
@@ -209,6 +224,42 @@
                     </div>
                 </div>
             </section>
+        </section>
+
+        <section id="panel-week" class="tab-panel" role="tabpanel" aria-labelledby="tab-week" hidden>
+            <div class="week-pulse">
+                <div class="week-header">
+                    <div>
+                        <p class="eyebrow">This week</p>
+                        <h2 id="weekRangeLabel"></h2>
+                    </div>
+                    <span id="weekSummary" class="pill"></span>
+                </div>
+
+                <div class="week-hero">
+                    <div class="ring week-ring" role="img" aria-labelledby="weekRingText">
+                        <svg viewBox="0 0 64 64" width="120" height="120">
+                            <circle class="ring-track" cx="32" cy="32" r="26"></circle>
+                            <circle id="weekRingFill" class="ring-fill week-ring-fill" cx="32" cy="32" r="26"></circle>
+                        </svg>
+                        <span id="weekRingText" class="ring-text week-ring-text">0%</span>
+                    </div>
+                    <div class="week-hero-copy">
+                        <p class="week-hero-title">Weekly pulse</p>
+                        <p id="weekHeroNote" class="week-hero-note">Your Mon–Sun daily rhythm at a glance.</p>
+                    </div>
+                </div>
+
+                <div id="weekBars" class="week-bars" aria-label="Daily productivity this week"></div>
+
+                <div class="week-legend" aria-hidden="true">
+                    <span><i class="legend-swatch legend-empty"></i> Quiet</span>
+                    <span><i class="legend-swatch legend-partial"></i> Partial</span>
+                    <span><i class="legend-swatch legend-strong"></i> Strong</span>
+                </div>
+
+                <p id="weekBonusNote" class="week-bonus-note"></p>
+            </div>
         </section>
     </main>
 </div>

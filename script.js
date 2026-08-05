@@ -18,14 +18,8 @@ function todayLocalISO() {
     return `${y}-${m}-${day}`
 }
 
-function getWeekStartSundayISO(date = new Date()) {
-    const d = new Date(date.getFullYear(), date.getMonth(), date.getDate())
-    d.setDate(d.getDate() - d.getDay())
-    return formatLocalISO(d)
-}
-
 function ensureBonusWeekReset() {
-    const weekStart = getWeekStartSundayISO()
+    const weekStart = getWeekStartMondayISO()
     const stored = localStorage.getItem("bonusWeekStart")
 
     if (!stored) {
@@ -33,11 +27,19 @@ function ensureBonusWeekReset() {
         return
     }
 
-    if (stored !== weekStart) {
-        tasks = []
-        saveTasks()
+    if (stored === weekStart) return
+
+    // If the stored key is any day in the current Mon–Sun week (including an
+    // old Sunday-based key), retarget to Monday without wiping this week's bonuses.
+    const currentWeekKeys = getWeekDatesMondayToSunday().map(day => day.dateKey)
+    if (currentWeekKeys.includes(stored)) {
         localStorage.setItem("bonusWeekStart", weekStart)
+        return
     }
+
+    tasks = []
+    saveTasks()
+    localStorage.setItem("bonusWeekStart", weekStart)
 }
 
 ensureBonusWeekReset()
@@ -53,28 +55,33 @@ function switchTab(tab) {
     currentTab = tab
     localStorage.setItem("activeTab", tab)
 
-    const todayTab = document.getElementById("tab-today")
-    const planningTab = document.getElementById("tab-planning")
-    const todayPanel = document.getElementById("panel-today")
-    const planningPanel = document.getElementById("panel-planning")
+    const tabs = {
+        today: document.getElementById("tab-today"),
+        planning: document.getElementById("tab-planning"),
+        week: document.getElementById("tab-week")
+    }
+    const panels = {
+        today: document.getElementById("panel-today"),
+        planning: document.getElementById("panel-planning"),
+        week: document.getElementById("panel-week")
+    }
 
-    const isToday = tab === "today"
-    todayTab.classList.toggle("is-active", isToday)
-    planningTab.classList.toggle("is-active", !isToday)
-    todayTab.setAttribute("aria-selected", String(isToday))
-    planningTab.setAttribute("aria-selected", String(!isToday))
+    Object.keys(tabs).forEach(name => {
+        const isActive = name === tab
+        tabs[name].classList.toggle("is-active", isActive)
+        tabs[name].setAttribute("aria-selected", String(isActive))
+        panels[name].classList.toggle("is-active", isActive)
+        panels[name].hidden = !isActive
+    })
 
-    todayPanel.classList.toggle("is-active", isToday)
-    planningPanel.classList.toggle("is-active", !isToday)
-    todayPanel.hidden = !isToday
-    planningPanel.hidden = isToday
-
-    if (isToday) {
+    if (tab === "today") {
         renderToday()
-    } else {
+    } else if (tab === "planning") {
         renderTasks()
         renderCalendar()
         renderSelectedDay()
+    } else {
+        renderWeek()
     }
 }
 
@@ -83,6 +90,7 @@ function refreshAllViews() {
     renderTasks()
     renderCalendar()
     renderSelectedDay()
+    renderWeek()
 }
 
 function getTodayMergedProgress() {
@@ -102,17 +110,96 @@ function getTodayMergedProgress() {
     }
 }
 
-function moveNonNegotiable(id, direction) {
-    const index = nonNegotiables.findIndex(item => item.id === id)
-    if (index < 0) return
+function reorderNonNegotiable(fromIndex, insertIndex) {
+    if (fromIndex < 0 || fromIndex >= nonNegotiables.length) return
+    if (insertIndex > fromIndex) insertIndex -= 1
+    if (insertIndex === fromIndex || insertIndex < 0) return
+    if (insertIndex > nonNegotiables.length - 1) {
+        insertIndex = nonNegotiables.length - 1
+    }
 
-    const target = index + direction
-    if (target < 0 || target >= nonNegotiables.length) return
-
-    const [item] = nonNegotiables.splice(index, 1)
-    nonNegotiables.splice(target, 0, item)
+    const [item] = nonNegotiables.splice(fromIndex, 1)
+    nonNegotiables.splice(insertIndex, 0, item)
     savePlannerData()
     refreshAllViews()
+}
+
+function clearDropTargets(listRoot) {
+    if (!listRoot) return
+    listRoot.querySelectorAll(".task-row.drop-target").forEach(row => {
+        row.classList.remove("drop-target")
+    })
+}
+
+function getNonNegotiableInsertIndex(listRoot, clientY) {
+    const rows = [...listRoot.querySelectorAll(".task-row[data-nn-id]")]
+    for (let i = 0; i < rows.length; i += 1) {
+        const rect = rows[i].getBoundingClientRect()
+        if (clientY < rect.top + rect.height / 2) return i
+    }
+    return rows.length
+}
+
+function attachNonNegotiableDrag(handle, row, itemId) {
+    const DRAG_THRESHOLD = 6
+    let drag = null
+
+    handle.addEventListener("pointerdown", function(event) {
+        if (event.pointerType === "mouse" && event.button !== 0) return
+        event.preventDefault()
+        handle.setPointerCapture(event.pointerId)
+        drag = {
+            itemId,
+            startY: event.clientY,
+            started: false,
+            fromIndex: nonNegotiables.findIndex(item => item.id === itemId),
+            insertIndex: null,
+            listRoot: row.parentElement
+        }
+    })
+
+    handle.addEventListener("pointermove", function(event) {
+        if (!drag || drag.itemId !== itemId) return
+        if (!drag.started) {
+            if (Math.abs(event.clientY - drag.startY) < DRAG_THRESHOLD) return
+            drag.started = true
+            row.classList.add("is-dragging")
+            document.body.classList.add("is-reordering")
+        }
+
+        clearDropTargets(drag.listRoot)
+        const insertIndex = getNonNegotiableInsertIndex(drag.listRoot, event.clientY)
+        drag.insertIndex = insertIndex
+
+        const rows = [...drag.listRoot.querySelectorAll(".task-row[data-nn-id]")]
+        if (insertIndex < rows.length) {
+            rows[insertIndex].classList.add("drop-target")
+        } else if (rows.length > 0) {
+            rows[rows.length - 1].classList.add("drop-target")
+        }
+    })
+
+    function endDrag(event) {
+        if (!drag || drag.itemId !== itemId) return
+        const { started, fromIndex, insertIndex, listRoot } = drag
+        drag = null
+
+        try {
+            handle.releasePointerCapture(event.pointerId)
+        } catch (error) {
+            // Pointer may already be released.
+        }
+
+        row.classList.remove("is-dragging")
+        document.body.classList.remove("is-reordering")
+        clearDropTargets(listRoot)
+
+        if (!started || insertIndex === null || fromIndex < 0) return
+        reorderNonNegotiable(fromIndex, insertIndex)
+    }
+
+    handle.addEventListener("pointerup", endDrag)
+    handle.addEventListener("pointercancel", endDrag)
 }
 
 function createTaskRow(text, completed, onToggle, onDelete, options = {}) {
@@ -120,27 +207,16 @@ function createTaskRow(text, completed, onToggle, onDelete, options = {}) {
     row.className = "task-row"
 
     if (options.reorder) {
-        const reorder = document.createElement("div")
-        reorder.className = "reorder-controls"
+        row.dataset.nnId = options.reorder.itemId
 
-        const upButton = document.createElement("button")
-        upButton.type = "button"
-        upButton.className = "reorder-button"
-        upButton.textContent = "↑"
-        upButton.setAttribute("aria-label", `Move ${text} up`)
-        upButton.disabled = !options.reorder.canMoveUp
-        upButton.addEventListener("click", options.reorder.onMoveUp)
-
-        const downButton = document.createElement("button")
-        downButton.type = "button"
-        downButton.className = "reorder-button"
-        downButton.textContent = "↓"
-        downButton.setAttribute("aria-label", `Move ${text} down`)
-        downButton.disabled = !options.reorder.canMoveDown
-        downButton.addEventListener("click", options.reorder.onMoveDown)
-
-        reorder.append(upButton, downButton)
-        row.appendChild(reorder)
+        const handle = document.createElement("button")
+        handle.type = "button"
+        handle.className = "drag-handle"
+        handle.textContent = "⋮⋮"
+        handle.setAttribute("aria-label", `Drag to reorder ${text}`)
+        handle.setAttribute("title", "Drag to reorder")
+        attachNonNegotiableDrag(handle, row, options.reorder.itemId)
+        row.appendChild(handle)
     }
 
     const label = document.createElement("label")
@@ -247,7 +323,7 @@ function renderToday() {
 
     list.innerHTML = ""
 
-    const recurringRows = nonNegotiables.map((item, index) => {
+    const recurringRows = nonNegotiables.map(item => {
         const completed = Boolean(nonNegotiableCompletions[today]?.[item.id])
         return createTaskRow(
             item.text,
@@ -267,14 +343,7 @@ function renderToday() {
             },
             {
                 reorder: {
-                    canMoveUp: index > 0,
-                    canMoveDown: index < nonNegotiables.length - 1,
-                    onMoveUp: function() {
-                        moveNonNegotiable(item.id, -1)
-                    },
-                    onMoveDown: function() {
-                        moveNonNegotiable(item.id, 1)
-                    }
+                    itemId: item.id
                 }
             }
         )
@@ -364,7 +433,7 @@ function renderToday() {
         icon: "⭐",
         accent: "group-mint",
         done: tasks.filter(task => task.completed).length,
-        empty: "Extra credit for this week. Resets every Sunday."
+        empty: "Extra credit for this week. Resets every Monday."
     })
 }
 
@@ -718,7 +787,7 @@ function renderSelectedDay() {
     if (nonNegotiables.length === 0) {
         recurringList.appendChild(createPlannerEmpty("Add your first daily must-do above."))
     } else {
-        nonNegotiables.forEach((item, index) => {
+        nonNegotiables.forEach(item => {
             const completed = Boolean(
                 nonNegotiableCompletions[selectedDate]?.[item.id]
             )
@@ -742,14 +811,7 @@ function renderSelectedDay() {
                 },
                 {
                     reorder: {
-                        canMoveUp: index > 0,
-                        canMoveDown: index < nonNegotiables.length - 1,
-                        onMoveUp: function() {
-                            moveNonNegotiable(item.id, -1)
-                        },
-                        onMoveDown: function() {
-                            moveNonNegotiable(item.id, 1)
-                        }
+                        itemId: item.id
                     }
                 }
             ))
@@ -833,9 +895,132 @@ function goToToday() {
     renderSelectedDay()
 }
 
+function getWeekStartMondayISO(date = new Date()) {
+    const d = new Date(date.getFullYear(), date.getMonth(), date.getDate())
+    const day = d.getDay()
+    const offset = day === 0 ? -6 : 1 - day
+    d.setDate(d.getDate() + offset)
+    return formatLocalISO(d)
+}
+
+function getWeekDatesMondayToSunday(date = new Date()) {
+    const start = dateFromISO(getWeekStartMondayISO(date))
+    return Array.from({ length: 7 }, (_, index) => {
+        const day = new Date(start.getFullYear(), start.getMonth(), start.getDate() + index)
+        return {
+            date: day,
+            dateKey: formatLocalISO(day)
+        }
+    })
+}
+
+function getBonusCompletedInWeek() {
+    // Bonus list resets each Monday; count currently completed bonus items
+    // as this week's bonus progress (same list the user sees now).
+    return tasks.filter(task => task.completed).length
+}
+
+function setWeekRing(percent) {
+    const ringFill = document.getElementById("weekRingFill")
+    const ringText = document.getElementById("weekRingText")
+    if (!ringFill || !ringText) return
+
+    ringFill.style.strokeDasharray = String(RING_CIRCUMFERENCE)
+    ringFill.style.strokeDashoffset = String(
+        RING_CIRCUMFERENCE * (1 - percent / 100)
+    )
+    ringText.textContent = `${percent}%`
+}
+
+function dayBarTone(progress) {
+    if (progress.total === 0) return "empty"
+    if (progress.percent >= 80) return "strong"
+    if (progress.percent > 0) return "partial"
+    return "empty"
+}
+
+function renderWeek() {
+    const rangeLabel = document.getElementById("weekRangeLabel")
+    const summary = document.getElementById("weekSummary")
+    const heroNote = document.getElementById("weekHeroNote")
+    const bars = document.getElementById("weekBars")
+    const bonusNote = document.getElementById("weekBonusNote")
+    if (!rangeLabel || !bars) return
+
+    const today = todayLocalISO()
+    const weekDays = getWeekDatesMondayToSunday()
+    const monday = weekDays[0].date
+    const sunday = weekDays[6].date
+
+    rangeLabel.textContent = `${monday.toLocaleDateString(undefined, {
+        month: "short",
+        day: "numeric"
+    })} – ${sunday.toLocaleDateString(undefined, {
+        month: "short",
+        day: "numeric",
+        year: "numeric"
+    })}`
+
+    const dayStats = weekDays.map(({ date, dateKey }) => {
+        const progress = getDayProgress(dateKey)
+        return {
+            date,
+            dateKey,
+            progress,
+            tone: dayBarTone(progress),
+            isToday: dateKey === today,
+            isFuture: dateKey > today
+        }
+    })
+
+    const avgPercent = Math.round(
+        dayStats.reduce((sum, day) => sum + day.progress.percent, 0) / 7
+    )
+    const strongDays = dayStats.filter(
+        day => day.progress.total > 0 && day.progress.percent >= 80
+    ).length
+    const activeDays = dayStats.filter(day => day.progress.total > 0).length
+    const bonusDone = getBonusCompletedInWeek()
+
+    setWeekRing(avgPercent)
+    summary.textContent = `${strongDays} strong day${strongDays === 1 ? "" : "s"} · ${avgPercent}% avg`
+    heroNote.textContent = activeDays === 0
+        ? "No daily plans logged yet this week — start on Today or Planning."
+        : `${activeDays} day${activeDays === 1 ? "" : "s"} with plans · Mon through Sun pulse.`
+
+    bars.innerHTML = ""
+    dayStats.forEach(day => {
+        const column = document.createElement("div")
+        column.className = `week-day${day.isToday ? " is-today" : ""}${day.isFuture ? " is-future" : ""}`
+
+        const name = document.createElement("span")
+        name.className = "week-day-name"
+        name.textContent = day.date.toLocaleDateString(undefined, { weekday: "short" }).slice(0, 2)
+
+        const track = document.createElement("div")
+        track.className = "week-day-track"
+        const fill = document.createElement("div")
+        fill.className = `week-day-fill tone-${day.tone}`
+        fill.style.height = `${Math.max(day.progress.percent, day.progress.total > 0 ? 8 : 0)}%`
+        track.appendChild(fill)
+
+        const value = document.createElement("span")
+        value.className = "week-day-value"
+        value.textContent = day.progress.total === 0 ? "—" : `${day.progress.percent}%`
+
+        column.append(name, track, value)
+        bars.appendChild(column)
+    })
+
+    bonusNote.textContent = bonusDone === 0
+        ? "Bonus this week: none completed yet (extra credit, separate from daily pulse)."
+        : `Bonus this week: ${bonusDone} completed (extra credit, separate from daily pulse).`
+}
+
 if (localStorage.getItem("darkMode") === "enabled") {
     document.body.classList.add("dark-mode")
 }
 
 document.getElementById("filter-all").classList.add("active-filter")
-switchTab(currentTab === "planning" ? "planning" : "today")
+const allowedTabs = ["today", "planning", "week"]
+switchTab(allowedTabs.includes(currentTab) ? currentTab : "today")
