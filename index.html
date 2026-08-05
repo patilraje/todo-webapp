@@ -227,7 +227,7 @@
         </section>
 
         <section id="panel-week" class="tab-panel" role="tabpanel" aria-labelledby="tab-week" hidden>
-            <div class="week-pulse">
+            <div class="week-pulse" id="weekPanel">
                 <div class="week-header">
                     <div>
                         <p class="eyebrow">This week</p>
@@ -236,21 +236,38 @@
                     <span id="weekSummary" class="pill"></span>
                 </div>
 
-                <div class="week-hero">
-                    <div class="ring week-ring" role="img" aria-labelledby="weekRingText">
-                        <svg viewBox="0 0 64 64" width="120" height="120">
-                            <circle class="ring-track" cx="32" cy="32" r="26"></circle>
-                            <circle id="weekRingFill" class="ring-fill week-ring-fill" cx="32" cy="32" r="26"></circle>
-                        </svg>
-                        <span id="weekRingText" class="ring-text week-ring-text">0%</span>
-                    </div>
-                    <div class="week-hero-copy">
-                        <p class="week-hero-title">Weekly pulse</p>
-                        <p id="weekHeroNote" class="week-hero-note">Your Mon–Sun daily rhythm at a glance.</p>
-                    </div>
+                <div class="week-view-chips" role="group" aria-label="Week display style">
+                    <button type="button" class="week-view-chip is-active" data-week-view="pulse" onclick="setWeekView('pulse')">Pulse</button>
+                    <button type="button" class="week-view-chip" data-week-view="heatmap" onclick="setWeekView('heatmap')">Heatmap</button>
+                    <button type="button" class="week-view-chip" data-week-view="constellation" onclick="setWeekView('constellation')">Constellation</button>
                 </div>
 
-                <div id="weekBars" class="week-bars" aria-label="Daily productivity this week"></div>
+                <div id="weekViewPulse" class="week-view is-active">
+                    <div class="week-hero">
+                        <div class="ring week-ring" role="img" aria-labelledby="weekRingText">
+                            <svg viewBox="0 0 64 64" width="120" height="120">
+                                <circle class="ring-track" cx="32" cy="32" r="26"></circle>
+                                <circle id="weekRingFill" class="ring-fill week-ring-fill" cx="32" cy="32" r="26"></circle>
+                            </svg>
+                            <span id="weekRingText" class="ring-text week-ring-text">0%</span>
+                        </div>
+                        <div class="week-hero-copy">
+                            <p class="week-hero-title">Weekly pulse</p>
+                            <p id="weekHeroNote" class="week-hero-note">Your Mon–Sun daily rhythm at a glance.</p>
+                        </div>
+                    </div>
+                    <div id="weekBars" class="week-bars" aria-label="Daily productivity this week"></div>
+                </div>
+
+                <div id="weekViewHeatmap" class="week-view" hidden>
+                    <p id="weekHeatmapNote" class="week-hero-note week-view-intro"></p>
+                    <div id="weekHeatmap" class="week-heatmap" aria-label="Weekly heatmap"></div>
+                </div>
+
+                <div id="weekViewConstellation" class="week-view" hidden>
+                    <p id="weekConstellationNote" class="week-hero-note week-view-intro"></p>
+                    <div id="weekConstellation" class="week-constellation" aria-label="Weekly constellation"></div>
+                </div>
 
                 <div class="week-legend" aria-hidden="true">
                     <span><i class="legend-swatch legend-empty"></i> Quiet</span>

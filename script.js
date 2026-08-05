@@ -939,29 +939,40 @@ function dayBarTone(progress) {
     return "empty"
 }
 
-function renderWeek() {
-    const rangeLabel = document.getElementById("weekRangeLabel")
-    const summary = document.getElementById("weekSummary")
-    const heroNote = document.getElementById("weekHeroNote")
-    const bars = document.getElementById("weekBars")
-    const bonusNote = document.getElementById("weekBonusNote")
-    if (!rangeLabel || !bars) return
+const WEEK_VIEWS = ["pulse", "heatmap", "constellation"]
+let weekView = localStorage.getItem("weekView") || "pulse"
+if (!WEEK_VIEWS.includes(weekView)) weekView = "pulse"
 
+function setWeekView(view) {
+    if (!WEEK_VIEWS.includes(view)) return
+    weekView = view
+    localStorage.setItem("weekView", view)
+    renderWeek()
+}
+
+function syncWeekViewChips() {
+    document.querySelectorAll(".week-view-chip").forEach(chip => {
+        const isActive = chip.dataset.weekView === weekView
+        chip.classList.toggle("is-active", isActive)
+        chip.setAttribute("aria-pressed", String(isActive))
+    })
+
+    const pulse = document.getElementById("weekViewPulse")
+    const heatmap = document.getElementById("weekViewHeatmap")
+    const constellation = document.getElementById("weekViewConstellation")
+    if (!pulse || !heatmap || !constellation) return
+
+    pulse.hidden = weekView !== "pulse"
+    heatmap.hidden = weekView !== "heatmap"
+    constellation.hidden = weekView !== "constellation"
+    pulse.classList.toggle("is-active", weekView === "pulse")
+    heatmap.classList.toggle("is-active", weekView === "heatmap")
+    constellation.classList.toggle("is-active", weekView === "constellation")
+}
+
+function getWeekDayStats() {
     const today = todayLocalISO()
-    const weekDays = getWeekDatesMondayToSunday()
-    const monday = weekDays[0].date
-    const sunday = weekDays[6].date
-
-    rangeLabel.textContent = `${monday.toLocaleDateString(undefined, {
-        month: "short",
-        day: "numeric"
-    })} – ${sunday.toLocaleDateString(undefined, {
-        month: "short",
-        day: "numeric",
-        year: "numeric"
-    })}`
-
-    const dayStats = weekDays.map(({ date, dateKey }) => {
+    return getWeekDatesMondayToSunday().map(({ date, dateKey }) => {
         const progress = getDayProgress(dateKey)
         return {
             date,
@@ -972,21 +983,19 @@ function renderWeek() {
             isFuture: dateKey > today
         }
     })
+}
 
-    const avgPercent = Math.round(
-        dayStats.reduce((sum, day) => sum + day.progress.percent, 0) / 7
-    )
-    const strongDays = dayStats.filter(
-        day => day.progress.total > 0 && day.progress.percent >= 80
-    ).length
-    const activeDays = dayStats.filter(day => day.progress.total > 0).length
-    const bonusDone = getBonusCompletedInWeek()
+function renderWeekPulse(dayStats, avgPercent, activeDays) {
+    const heroNote = document.getElementById("weekHeroNote")
+    const bars = document.getElementById("weekBars")
+    if (!bars) return
 
     setWeekRing(avgPercent)
-    summary.textContent = `${strongDays} strong day${strongDays === 1 ? "" : "s"} · ${avgPercent}% avg`
-    heroNote.textContent = activeDays === 0
-        ? "No daily plans logged yet this week — start on Today or Planning."
-        : `${activeDays} day${activeDays === 1 ? "" : "s"} with plans · Mon through Sun pulse.`
+    if (heroNote) {
+        heroNote.textContent = activeDays === 0
+            ? "No daily plans logged yet this week — start on Today or Planning."
+            : `${activeDays} day${activeDays === 1 ? "" : "s"} with plans · Mon through Sun pulse.`
+    }
 
     bars.innerHTML = ""
     dayStats.forEach(day => {
@@ -1011,10 +1020,135 @@ function renderWeek() {
         column.append(name, track, value)
         bars.appendChild(column)
     })
+}
 
-    bonusNote.textContent = bonusDone === 0
-        ? "Bonus this week: none completed yet (extra credit, separate from daily pulse)."
-        : `Bonus this week: ${bonusDone} completed (extra credit, separate from daily pulse).`
+function renderWeekHeatmap(dayStats, activeDays) {
+    const note = document.getElementById("weekHeatmapNote")
+    const grid = document.getElementById("weekHeatmap")
+    if (!grid) return
+
+    if (note) {
+        note.textContent = activeDays === 0
+            ? "Heatmap is quiet this week — complete daily plans to light up the squares."
+            : "Warmer squares mean stronger days. Cooler means quieter ones."
+    }
+
+    grid.innerHTML = ""
+    dayStats.forEach(day => {
+        const cell = document.createElement("div")
+        cell.className = `heatmap-cell tone-${day.tone}${day.isToday ? " is-today" : ""}${day.isFuture ? " is-future" : ""}`
+        cell.style.setProperty("--heat", `${day.progress.percent}%`)
+        cell.title = day.progress.total === 0
+            ? `${day.date.toLocaleDateString(undefined, { weekday: "long" })}: no plans`
+            : `${day.date.toLocaleDateString(undefined, { weekday: "long" })}: ${day.progress.completed}/${day.progress.total} (${day.progress.percent}%)`
+
+        const name = document.createElement("span")
+        name.className = "heatmap-day"
+        name.textContent = day.date.toLocaleDateString(undefined, { weekday: "short" }).slice(0, 2)
+
+        const value = document.createElement("strong")
+        value.className = "heatmap-value"
+        value.textContent = day.progress.total === 0 ? "—" : `${day.progress.percent}%`
+
+        cell.append(name, value)
+        grid.appendChild(cell)
+    })
+}
+
+function renderWeekConstellation(dayStats, activeDays) {
+    const note = document.getElementById("weekConstellationNote")
+    const sky = document.getElementById("weekConstellation")
+    if (!sky) return
+
+    if (note) {
+        note.textContent = activeDays === 0
+            ? "No stars yet — each completed daily item becomes a glowing dot."
+            : "Each glowing dot is a completed daily item for that day."
+    }
+
+    sky.innerHTML = ""
+    dayStats.forEach(day => {
+        const column = document.createElement("div")
+        column.className = `constellation-day${day.isToday ? " is-today" : ""}${day.isFuture ? " is-future" : ""}`
+
+        const name = document.createElement("span")
+        name.className = "week-day-name"
+        name.textContent = day.date.toLocaleDateString(undefined, { weekday: "short" }).slice(0, 2)
+
+        const dots = document.createElement("div")
+        dots.className = "constellation-dots"
+        const count = Math.min(day.progress.completed, 10)
+        if (count === 0) {
+            const empty = document.createElement("span")
+            empty.className = "constellation-empty"
+            empty.textContent = "·"
+            dots.appendChild(empty)
+        } else {
+            for (let i = 0; i < count; i += 1) {
+                const dot = document.createElement("span")
+                dot.className = "constellation-dot"
+                dot.style.animationDelay = `${i * 0.05}s`
+                dots.appendChild(dot)
+            }
+        }
+
+        const value = document.createElement("span")
+        value.className = "week-day-value"
+        value.textContent = day.progress.completed === 0 ? "0" : String(day.progress.completed)
+
+        column.append(name, dots, value)
+        sky.appendChild(column)
+    })
+}
+
+function renderWeek() {
+    const rangeLabel = document.getElementById("weekRangeLabel")
+    const summary = document.getElementById("weekSummary")
+    const bonusNote = document.getElementById("weekBonusNote")
+    if (!rangeLabel) return
+
+    syncWeekViewChips()
+
+    const weekDays = getWeekDatesMondayToSunday()
+    const monday = weekDays[0].date
+    const sunday = weekDays[6].date
+    const dayStats = getWeekDayStats()
+
+    rangeLabel.textContent = `${monday.toLocaleDateString(undefined, {
+        month: "short",
+        day: "numeric"
+    })} – ${sunday.toLocaleDateString(undefined, {
+        month: "short",
+        day: "numeric",
+        year: "numeric"
+    })}`
+
+    const avgPercent = Math.round(
+        dayStats.reduce((sum, day) => sum + day.progress.percent, 0) / 7
+    )
+    const strongDays = dayStats.filter(
+        day => day.progress.total > 0 && day.progress.percent >= 80
+    ).length
+    const activeDays = dayStats.filter(day => day.progress.total > 0).length
+    const bonusDone = getBonusCompletedInWeek()
+
+    if (summary) {
+        summary.textContent = `${strongDays} strong day${strongDays === 1 ? "" : "s"} · ${avgPercent}% avg`
+    }
+
+    if (weekView === "heatmap") {
+        renderWeekHeatmap(dayStats, activeDays)
+    } else if (weekView === "constellation") {
+        renderWeekConstellation(dayStats, activeDays)
+    } else {
+        renderWeekPulse(dayStats, avgPercent, activeDays)
+    }
+
+    if (bonusNote) {
+        bonusNote.textContent = bonusDone === 0
+            ? "Bonus this week: none completed yet (extra credit, separate from daily pulse)."
+            : `Bonus this week: ${bonusDone} completed (extra credit, separate from daily pulse).`
+    }
 }
 
 if (localStorage.getItem("darkMode") === "enabled") {
