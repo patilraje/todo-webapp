@@ -37,7 +37,7 @@ function ensureBonusWeekReset() {
         return
     }
 
-    tasks = []
+    tasks = tasks.filter(task => !task.completed)
     saveTasks()
     localStorage.setItem("bonusWeekStart", weekStart)
 }
@@ -433,7 +433,7 @@ function renderToday() {
         icon: "⭐",
         accent: "group-mint",
         done: tasks.filter(task => task.completed).length,
-        empty: "Extra credit for this week. Resets every Monday."
+        empty: "Extra credit for this week. Completed bonus clears every Monday."
     })
 }
 
