@@ -83,6 +83,21 @@
                 </svg>
                 Week
             </button>
+            <button
+                type="button"
+                id="tab-notes"
+                class="tab-button"
+                role="tab"
+                aria-selected="false"
+                aria-controls="panel-notes"
+                onclick="switchTab('notes')"
+            >
+                <svg viewBox="0 0 24 24" class="tab-icon" aria-hidden="true">
+                    <path d="M6 4.5h9.5L18.5 7.5V19.5H6z"></path>
+                    <path d="M15 4.5V8h3.5M8 11h8M8 14.5h8M8 18h5"></path>
+                </svg>
+                Notes
+            </button>
         </nav>
 
         <section id="panel-today" class="tab-panel is-active" role="tabpanel" aria-labelledby="tab-today">
@@ -276,6 +291,67 @@
                 </div>
 
                 <p id="weekBonusNote" class="week-bonus-note"></p>
+            </div>
+        </section>
+
+        <section id="panel-notes" class="tab-panel" role="tabpanel" aria-labelledby="tab-notes" hidden>
+            <div class="notes-layout">
+                <aside class="notes-sidebar">
+                    <div class="notes-sidebar-head">
+                        <div>
+                            <p class="eyebrow">Notebook</p>
+                            <h2>Notes</h2>
+                        </div>
+                        <button type="button" class="primary-button" onclick="startNewNote()">New</button>
+                    </div>
+
+                    <form id="newNoteForm" class="new-note-form" hidden onsubmit="createNote(event)">
+                        <input id="newNoteTitle" type="text" placeholder="Note title (e.g. Grocery)" required>
+                        <div class="note-type-toggle" role="group" aria-label="Note type">
+                            <button type="button" id="noteTypeText" class="week-view-chip is-active" onclick="setNewNoteType('text')">Text</button>
+                            <button type="button" id="noteTypeChecklist" class="week-view-chip" onclick="setNewNoteType('checklist')">Checklist</button>
+                        </div>
+                        <div class="new-note-actions">
+                            <button type="submit" class="primary-button">Create</button>
+                            <button type="button" onclick="cancelNewNote()">Cancel</button>
+                        </div>
+                    </form>
+
+                    <div id="notesList" class="notes-list"></div>
+                </aside>
+
+                <section class="notes-editor" id="notesEditor">
+                    <div id="notesEmptyState" class="notes-empty">
+                        <p>Create a note for groceries, shopping, or ideas.</p>
+                    </div>
+
+                    <div id="notesEditorActive" hidden>
+                        <div class="notes-editor-head">
+                            <input id="noteTitleInput" class="note-title-input" type="text" aria-label="Note title" oninput="updateSelectedNoteTitle(this.value)">
+                            <div class="notes-editor-actions">
+                                <span id="noteTypeBadge" class="note-type-badge"></span>
+                                <button type="button" id="clearCheckedBtn" class="subtle-button" hidden onclick="clearCheckedNoteItems()">Clear checked</button>
+                                <button type="button" class="icon-button" aria-label="Delete note" onclick="deleteSelectedNote()">×</button>
+                            </div>
+                        </div>
+
+                        <textarea
+                            id="noteBodyInput"
+                            class="note-body-input"
+                            placeholder="Write your note..."
+                            hidden
+                            oninput="updateSelectedNoteBody(this.value)"
+                        ></textarea>
+
+                        <div id="noteChecklistPanel" class="note-checklist-panel" hidden>
+                            <form class="planner-form" onsubmit="addChecklistItem(event)">
+                                <input id="checklistItemInput" type="text" placeholder="Add an item...">
+                                <button class="primary-button" type="submit">Add</button>
+                            </form>
+                            <div id="noteChecklistItems" class="planner-list"></div>
+                        </div>
+                    </div>
+                </section>
             </div>
         </section>
     </main>

@@ -58,12 +58,14 @@ function switchTab(tab) {
     const tabs = {
         today: document.getElementById("tab-today"),
         planning: document.getElementById("tab-planning"),
-        week: document.getElementById("tab-week")
+        week: document.getElementById("tab-week"),
+        notes: document.getElementById("tab-notes")
     }
     const panels = {
         today: document.getElementById("panel-today"),
         planning: document.getElementById("panel-planning"),
-        week: document.getElementById("panel-week")
+        week: document.getElementById("panel-week"),
+        notes: document.getElementById("panel-notes")
     }
 
     Object.keys(tabs).forEach(name => {
@@ -80,8 +82,10 @@ function switchTab(tab) {
         renderTasks()
         renderCalendar()
         renderSelectedDay()
-    } else {
+    } else if (tab === "week") {
         renderWeek()
+    } else {
+        renderNotes()
     }
 }
 
@@ -91,6 +95,7 @@ function refreshAllViews() {
     renderCalendar()
     renderSelectedDay()
     renderWeek()
+    renderNotes()
 }
 
 function getTodayMergedProgress() {
@@ -1155,6 +1160,283 @@ if (localStorage.getItem("darkMode") === "enabled") {
     document.body.classList.add("dark-mode")
 }
 
+let notes = JSON.parse(localStorage.getItem("notes")) || []
+let selectedNoteId = localStorage.getItem("selectedNoteId") || ""
+let newNoteType = "text"
+let isCreatingNote = false
+
+function saveNotes() {
+    localStorage.setItem("notes", JSON.stringify(notes))
+}
+
+function saveSelectedNoteId() {
+    if (selectedNoteId) {
+        localStorage.setItem("selectedNoteId", selectedNoteId)
+    } else {
+        localStorage.removeItem("selectedNoteId")
+    }
+}
+
+function createNoteId() {
+    return `${Date.now()}-${Math.random().toString(16).slice(2)}`
+}
+
+function getSelectedNote() {
+    return notes.find(note => note.id === selectedNoteId) || null
+}
+
+function touchNote(note) {
+    note.updatedAt = Date.now()
+}
+
+function startNewNote() {
+    isCreatingNote = true
+    newNoteType = "text"
+    const form = document.getElementById("newNoteForm")
+    const titleInput = document.getElementById("newNoteTitle")
+    if (form) form.hidden = false
+    syncNewNoteTypeChips()
+    if (titleInput) {
+        titleInput.value = ""
+        titleInput.focus()
+    }
+}
+
+function cancelNewNote() {
+    isCreatingNote = false
+    const form = document.getElementById("newNoteForm")
+    if (form) form.hidden = true
+}
+
+function setNewNoteType(type) {
+    newNoteType = type === "checklist" ? "checklist" : "text"
+    syncNewNoteTypeChips()
+}
+
+function syncNewNoteTypeChips() {
+    const textChip = document.getElementById("noteTypeText")
+    const checklistChip = document.getElementById("noteTypeChecklist")
+    if (!textChip || !checklistChip) return
+    textChip.classList.toggle("is-active", newNoteType === "text")
+    checklistChip.classList.toggle("is-active", newNoteType === "checklist")
+}
+
+function createNote(event) {
+    event.preventDefault()
+    const titleInput = document.getElementById("newNoteTitle")
+    const title = (titleInput?.value || "").trim() || "Untitled note"
+    const note = {
+        id: createNoteId(),
+        title,
+        type: newNoteType,
+        body: "",
+        items: [],
+        updatedAt: Date.now()
+    }
+    notes.unshift(note)
+    selectedNoteId = note.id
+    isCreatingNote = false
+    saveNotes()
+    saveSelectedNoteId()
+    cancelNewNote()
+    renderNotes()
+}
+
+function selectNote(noteId) {
+    selectedNoteId = noteId
+    saveSelectedNoteId()
+    renderNotes()
+}
+
+function updateSelectedNoteTitle(value) {
+    const note = getSelectedNote()
+    if (!note) return
+    note.title = value.trim() || "Untitled note"
+    touchNote(note)
+    saveNotes()
+    renderNotesListOnly()
+}
+
+function updateSelectedNoteBody(value) {
+    const note = getSelectedNote()
+    if (!note || note.type !== "text") return
+    note.body = value
+    touchNote(note)
+    saveNotes()
+}
+
+function deleteSelectedNote() {
+    const note = getSelectedNote()
+    if (!note) return
+    const confirmed = window.confirm(`Delete “${note.title}”?`)
+    if (!confirmed) return
+    notes = notes.filter(item => item.id !== note.id)
+    selectedNoteId = notes[0]?.id || ""
+    saveNotes()
+    saveSelectedNoteId()
+    renderNotes()
+}
+
+function addChecklistItem(event) {
+    event.preventDefault()
+    const note = getSelectedNote()
+    if (!note || note.type !== "checklist") return
+    const input = document.getElementById("checklistItemInput")
+    const text = (input?.value || "").trim()
+    if (!text) return
+    note.items.push({
+        id: createNoteId(),
+        text,
+        done: false
+    })
+    touchNote(note)
+    input.value = ""
+    saveNotes()
+    renderNotes()
+    input.focus()
+}
+
+function toggleChecklistItem(itemId) {
+    const note = getSelectedNote()
+    if (!note || note.type !== "checklist") return
+    const item = note.items.find(entry => entry.id === itemId)
+    if (!item) return
+    item.done = !item.done
+    touchNote(note)
+    saveNotes()
+    renderNotes()
+}
+
+function deleteChecklistItem(itemId) {
+    const note = getSelectedNote()
+    if (!note || note.type !== "checklist") return
+    note.items = note.items.filter(entry => entry.id !== itemId)
+    touchNote(note)
+    saveNotes()
+    renderNotes()
+}
+
+function clearCheckedNoteItems() {
+    const note = getSelectedNote()
+    if (!note || note.type !== "checklist") return
+    note.items = note.items.filter(item => !item.done)
+    touchNote(note)
+    saveNotes()
+    renderNotes()
+}
+
+function renderNotesListOnly() {
+    const list = document.getElementById("notesList")
+    if (!list) return
+    list.innerHTML = ""
+
+    if (notes.length === 0) {
+        const empty = document.createElement("p")
+        empty.className = "notes-list-empty"
+        empty.textContent = "No notes yet."
+        list.appendChild(empty)
+        return
+    }
+
+    notes
+        .slice()
+        .sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0))
+        .forEach(note => {
+            const button = document.createElement("button")
+            button.type = "button"
+            button.className = `note-list-item${note.id === selectedNoteId ? " is-selected" : ""}`
+            button.onclick = function() {
+                selectNote(note.id)
+            }
+
+            const title = document.createElement("span")
+            title.className = "note-list-title"
+            title.textContent = note.title || "Untitled note"
+
+            const badge = document.createElement("span")
+            badge.className = `note-type-badge badge-${note.type}`
+            badge.textContent = note.type === "checklist" ? "Checklist" : "Text"
+
+            button.append(title, badge)
+            list.appendChild(button)
+        })
+}
+
+function renderNotes() {
+    const emptyState = document.getElementById("notesEmptyState")
+    const editorActive = document.getElementById("notesEditorActive")
+    const titleInput = document.getElementById("noteTitleInput")
+    const bodyInput = document.getElementById("noteBodyInput")
+    const checklistPanel = document.getElementById("noteChecklistPanel")
+    const checklistItems = document.getElementById("noteChecklistItems")
+    const typeBadge = document.getElementById("noteTypeBadge")
+    const clearCheckedBtn = document.getElementById("clearCheckedBtn")
+    const form = document.getElementById("newNoteForm")
+
+    if (!notes.find(note => note.id === selectedNoteId)) {
+        selectedNoteId = notes[0]?.id || ""
+        saveSelectedNoteId()
+    }
+
+    if (form) form.hidden = !isCreatingNote
+    renderNotesListOnly()
+
+    const note = getSelectedNote()
+    if (!note) {
+        if (emptyState) emptyState.hidden = false
+        if (editorActive) editorActive.hidden = true
+        return
+    }
+
+    if (emptyState) emptyState.hidden = true
+    if (editorActive) editorActive.hidden = false
+
+    if (titleInput && document.activeElement !== titleInput) {
+        titleInput.value = note.title || ""
+    }
+
+    if (typeBadge) {
+        typeBadge.className = `note-type-badge badge-${note.type}`
+        typeBadge.textContent = note.type === "checklist" ? "Checklist" : "Text"
+    }
+
+    if (note.type === "text") {
+        if (bodyInput) {
+            bodyInput.hidden = false
+            if (document.activeElement !== bodyInput) {
+                bodyInput.value = note.body || ""
+            }
+        }
+        if (checklistPanel) checklistPanel.hidden = true
+        if (clearCheckedBtn) clearCheckedBtn.hidden = true
+    } else {
+        if (bodyInput) bodyInput.hidden = true
+        if (checklistPanel) checklistPanel.hidden = false
+        if (clearCheckedBtn) {
+            clearCheckedBtn.hidden = !note.items.some(item => item.done)
+        }
+        if (checklistItems) {
+            checklistItems.innerHTML = ""
+            if (note.items.length === 0) {
+                checklistItems.appendChild(createPlannerEmpty("Add items for groceries, shopping, and more."))
+            } else {
+                note.items.forEach(item => {
+                    checklistItems.appendChild(createTaskRow(
+                        item.text,
+                        item.done,
+                        function() {
+                            toggleChecklistItem(item.id)
+                        },
+                        function() {
+                            deleteChecklistItem(item.id)
+                        }
+                    ))
+                })
+            }
+        }
+    }
+}
+
 document.getElementById("filter-all").classList.add("active-filter")
-const allowedTabs = ["today", "planning", "week"]
+const allowedTabs = ["today", "planning", "week", "notes"]
 switchTab(allowedTabs.includes(currentTab) ? currentTab : "today")

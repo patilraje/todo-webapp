@@ -167,7 +167,7 @@ body {
 
 .tab-bar {
     display: grid;
-    grid-template-columns: 1fr 1fr 1fr;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 6px;
     margin-bottom: 24px;
     padding: 6px;
@@ -1201,6 +1201,174 @@ body.dark-mode .week-pulse {
         linear-gradient(180deg, rgba(255, 255, 255, 0.03), transparent 60%);
 }
 
+.notes-layout {
+    display: grid;
+    grid-template-columns: minmax(200px, 260px) minmax(0, 1fr);
+    gap: 16px;
+    align-items: start;
+}
+
+.notes-sidebar,
+.notes-editor {
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    background: var(--surface-solid);
+    padding: 16px;
+    min-width: 0;
+}
+
+.notes-sidebar-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 14px;
+}
+
+.notes-sidebar-head h2 {
+    margin: 0;
+}
+
+.new-note-form {
+    display: grid;
+    gap: 10px;
+    margin-bottom: 14px;
+    padding: 12px;
+    border-radius: 14px;
+    background: var(--surface-muted);
+    border: 1px solid var(--border);
+}
+
+.note-type-toggle {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+}
+
+.new-note-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.notes-list {
+    display: grid;
+    gap: 8px;
+}
+
+.notes-list-empty,
+.notes-empty {
+    margin: 0;
+    padding: 18px 14px;
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 14px;
+    line-height: 1.45;
+}
+
+.note-list-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    width: 100%;
+    text-align: left;
+    padding: 12px;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    background: var(--surface-muted);
+    box-shadow: none;
+}
+
+.note-list-item:hover {
+    transform: none;
+    border-color: var(--accent);
+}
+
+.note-list-item.is-selected {
+    background: var(--accent-soft);
+    border-color: var(--accent);
+}
+
+.note-list-title {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-weight: 700;
+}
+
+.note-type-badge {
+    flex: 0 0 auto;
+    padding: 4px 8px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    background: var(--accent-soft);
+    color: var(--accent);
+}
+
+.note-type-badge.badge-checklist {
+    background: color-mix(in srgb, var(--mint) 18%, transparent);
+    color: var(--mint);
+}
+
+.notes-editor-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 14px;
+}
+
+.note-title-input {
+    flex: 1;
+    min-width: 0;
+    border: none;
+    background: transparent;
+    font-size: 1.25rem;
+    font-weight: 800;
+    padding: 4px 0;
+}
+
+.note-title-input:focus-visible {
+    outline: none;
+    box-shadow: inset 0 -2px 0 var(--accent);
+}
+
+.notes-editor-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.subtle-button {
+    border: 1px solid var(--border);
+    background: var(--surface-muted);
+    color: var(--text-muted);
+    font-size: 12px;
+    font-weight: 700;
+    padding: 8px 10px;
+}
+
+.note-body-input {
+    width: 100%;
+    min-height: 280px;
+    resize: vertical;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    background: var(--surface-muted);
+    padding: 14px;
+    font-family: inherit;
+    font-size: 15px;
+    line-height: 1.55;
+    color: var(--text);
+}
+
+.note-checklist-panel .planner-form {
+    margin-top: 0;
+}
+
 @media (max-width: 700px) {
     .app-shell {
         padding: 74px 12px 24px;
@@ -1217,13 +1385,22 @@ body.dark-mode .week-pulse {
 
     .tab-button {
         gap: 4px;
-        padding: 10px 8px;
-        font-size: 13px;
+        padding: 10px 6px;
+        font-size: 12px;
     }
 
     .tab-icon {
         width: 15px;
         height: 15px;
+    }
+
+    .notes-layout {
+        grid-template-columns: 1fr;
+    }
+
+    .notes-editor-head {
+        flex-direction: column;
+        align-items: stretch;
     }
 
     .planner-columns {
