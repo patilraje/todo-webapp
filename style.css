@@ -439,6 +439,53 @@ input[type="checkbox"]:checked::after {
     font-weight: 800;
 }
 
+.bonus-inbox-chips {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 6px;
+}
+
+.confetti-layer {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 50;
+    overflow: hidden;
+}
+
+.confetti-particle {
+    position: absolute;
+    left: var(--confetti-x-start);
+    top: var(--confetti-y-start);
+    width: 9px;
+    height: 14px;
+    background: var(--confetti-color);
+    border-radius: 2px;
+    opacity: 0;
+    animation: confettiBurst var(--confetti-duration) ease-out var(--confetti-delay) forwards;
+}
+
+@keyframes confettiBurst {
+    0% {
+        opacity: 1;
+        transform: translate(0, 0) rotate(0deg) scale(1);
+    }
+    100% {
+        opacity: 0;
+        transform: translate(var(--confetti-x-drift), var(--confetti-y-drift))
+            rotate(var(--confetti-rotation)) scale(0.55);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .confetti-particle {
+        animation: none;
+        display: none;
+    }
+}
+
 .group-flame { --group-color: var(--flame); }
 .group-sky { --group-color: var(--sky); }
 .group-mint { --group-color: var(--mint); }

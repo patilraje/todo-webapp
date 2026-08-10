@@ -10,12 +10,95 @@ let displayedMonth = new Date()
 displayedMonth.setDate(1)
 let currentTab = localStorage.getItem("activeTab") || "today"
 
+const CONFETTI_COLORS = [
+    "#6366f1",
+    "#8b5cf6",
+    "#10b981",
+    "#f59e0b",
+    "#ec4899",
+    "#06b6d4"
+]
+
 function todayLocalISO() {
     const d = new Date()
     const y = d.getFullYear()
     const m = String(d.getMonth() + 1).padStart(2, "0")
     const day = String(d.getDate()).padStart(2, "0")
     return `${y}-${m}-${day}`
+}
+
+function celebrateConfetti() {
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return
+
+    let layer = document.getElementById("confettiLayer")
+    if (!layer) {
+        layer = document.createElement("div")
+        layer.id = "confettiLayer"
+        layer.className = "confetti-layer"
+        layer.setAttribute("aria-hidden", "true")
+        document.body.appendChild(layer)
+    }
+
+    const count = 28
+    for (let i = 0; i < count; i += 1) {
+        const fromLeft = i < count / 2
+        const particle = document.createElement("span")
+        particle.className = "confetti-particle"
+        particle.style.setProperty(
+            "--confetti-color",
+            CONFETTI_COLORS[i % CONFETTI_COLORS.length]
+        )
+        particle.style.setProperty("--confetti-delay", `${Math.random() * 0.18}s`)
+        particle.style.setProperty(
+            "--confetti-duration",
+            `${1.15 + Math.random() * 0.55}s`
+        )
+        particle.style.setProperty(
+            "--confetti-x-start",
+            fromLeft ? `${Math.random() * 6}%` : `${94 + Math.random() * 6}%`
+        )
+        particle.style.setProperty(
+            "--confetti-x-drift",
+            fromLeft
+                ? `${18 + Math.random() * 32}vw`
+                : `${-18 - Math.random() * 32}vw`
+        )
+        particle.style.setProperty(
+            "--confetti-y-start",
+            `${12 + Math.random() * 76}vh`
+        )
+        particle.style.setProperty(
+            "--confetti-y-drift",
+            `${8 + Math.random() * 28}vh`
+        )
+        particle.style.setProperty(
+            "--confetti-rotation",
+            `${Math.random() * 720 - 360}deg`
+        )
+        layer.appendChild(particle)
+        particle.addEventListener("animationend", () => particle.remove())
+    }
+
+    clearTimeout(celebrateConfetti._cleanup)
+    celebrateConfetti._cleanup = setTimeout(() => {
+        layer.innerHTML = ""
+    }, 2200)
+}
+
+function maybeCelebrateDayComplete(dateKey, previousPercent) {
+    const progress = getDayProgress(dateKey)
+    if (progress.total > 0 && progress.percent === 100 && previousPercent < 100) {
+        celebrateConfetti()
+    }
+}
+
+function setBonusCompleted(index, completed) {
+    if (index < 0 || index >= tasks.length) return
+    const wasCompleted = Boolean(tasks[index].completed)
+    tasks[index].completed = Boolean(completed)
+    saveTasks()
+    refreshAllViews()
+    if (completed && !wasCompleted) celebrateConfetti()
 }
 
 function ensureBonusWeekReset() {
@@ -334,12 +417,14 @@ function renderToday() {
             item.text,
             completed,
             function() {
+                const previousPercent = getDayProgress(today).percent
                 if (!nonNegotiableCompletions[today]) {
                     nonNegotiableCompletions[today] = {}
                 }
                 nonNegotiableCompletions[today][item.id] = !completed
                 savePlannerData()
                 refreshAllViews()
+                maybeCelebrateDayComplete(today, previousPercent)
             },
             function() {
                 nonNegotiables = nonNegotiables.filter(current => current.id !== item.id)
@@ -360,9 +445,11 @@ function renderToday() {
             task.text,
             task.completed,
             function() {
+                const previousPercent = getDayProgress(today).percent
                 task.completed = !task.completed
                 savePlannerData()
                 refreshAllViews()
+                maybeCelebrateDayComplete(today, previousPercent)
             },
             function() {
                 dayTasks[today] = planned.filter(current => current.id !== task.id)
@@ -383,9 +470,7 @@ function renderToday() {
             task.text,
             task.completed,
             function() {
-                tasks[index].completed = !tasks[index].completed
-                saveTasks()
-                refreshAllViews()
+                setBonusCompleted(index, !tasks[index].completed)
             },
             function() {
                 tasks.splice(index, 1)
@@ -506,9 +591,7 @@ function renderTasks() {
         checkbox.type = "checkbox"
         checkbox.checked = task.completed
         checkbox.onchange = function() {
-            tasks[index].completed = checkbox.checked
-            saveTasks()
-            refreshAllViews()
+            setBonusCompleted(index, checkbox.checked)
         }
 
         let span = document.createElement("span")
@@ -623,11 +706,16 @@ function clearCompleted() {
 }
 
 function markAllComplete() {
+    let anyCompleted = false
     tasks.forEach(task => {
-        task.completed = true
+        if (!task.completed) {
+            task.completed = true
+            anyCompleted = true
+        }
     })
     saveTasks()
     refreshAllViews()
+    if (anyCompleted) celebrateConfetti()
 }
 
 function clearAllTasks() {
@@ -793,12 +881,14 @@ function renderSelectedDay() {
                 item.text,
                 completed,
                 function() {
+                    const previousPercent = getDayProgress(selectedDate).percent
                     if (!nonNegotiableCompletions[selectedDate]) {
                         nonNegotiableCompletions[selectedDate] = {}
                     }
                     nonNegotiableCompletions[selectedDate][item.id] = !completed
                     savePlannerData()
                     refreshAllViews()
+                    maybeCelebrateDayComplete(selectedDate, previousPercent)
                 },
                 function() {
                     nonNegotiables = nonNegotiables.filter(
@@ -825,9 +915,11 @@ function renderSelectedDay() {
                 task.text,
                 task.completed,
                 function() {
+                    const previousPercent = getDayProgress(selectedDate).percent
                     task.completed = !task.completed
                     savePlannerData()
                     refreshAllViews()
+                    maybeCelebrateDayComplete(selectedDate, previousPercent)
                 },
                 function() {
                     dayTasks[selectedDate] = tasksForDay.filter(
