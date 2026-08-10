@@ -119,63 +119,6 @@
         </section>
 
         <section id="panel-planning" class="tab-panel" role="tabpanel" aria-labelledby="tab-planning" hidden>
-            <section class="planning-tools">
-                <div class="input-row">
-                    <input type="text" id="taskInput" placeholder="Add a bonus task">
-                    <input type="date" id="dueDate">
-                    <button class="primary-button" type="button" onclick="addTask()">Add</button>
-                </div>
-
-                <section class="actions-row">
-                    <button type="button" onclick="clearCompleted()">Clear Completed</button>
-                    <button type="button" onclick="markAllComplete()">Mark All Complete</button>
-                    <button type="button" onclick="clearAllTasks()">Clear All</button>
-                </section>
-
-                <section class="search-row">
-                    <input
-                        type="text"
-                        id="searchInput"
-                        placeholder="Search tasks..."
-                        oninput="setSearchQuery(this.value)"
-                    >
-                </section>
-
-                <div id="filters">
-                    <button type="button" id="filter-all" onclick="setFilter('all')">All</button>
-                    <button type="button" id="filter-active" onclick="setFilter('active')">Active</button>
-                    <button type="button" id="filter-completed" onclick="setFilter('completed')">Completed</button>
-                </div>
-
-                <section class="stats-row">
-                    <div class="stat-chip stat-total">
-                        <span>Total</span>
-                        <strong id="statTotal">0</strong>
-                    </div>
-                    <div class="stat-chip stat-open">
-                        <span>Open</span>
-                        <strong id="statOpen">0</strong>
-                    </div>
-                    <div class="stat-chip stat-done">
-                        <span>Done</span>
-                        <strong id="statDone">0</strong>
-                    </div>
-                </section>
-
-                <section class="progress-section">
-                    <div class="progress-header">
-                        <span>Bonus progress</span>
-                        <strong id="progressLabel">0%</strong>
-                    </div>
-                    <div class="progress-track">
-                        <div id="progressFill" class="progress-fill"></div>
-                    </div>
-                </section>
-
-                <ul id="taskList"></ul>
-                <p id="taskCount" class="count-line"></p>
-            </section>
-
             <section class="calendar-section">
                 <div class="calendar-heading">
                     <div>
@@ -212,7 +155,7 @@
                         <section class="planner-panel accent-flame">
                             <div class="panel-heading">
                                 <div>
-                                    <h4>⚡ Daily non-negotiables</h4>
+                                    <h4>Daily non-negotiables</h4>
                                     <p>These appear on every day.</p>
                                 </div>
                             </div>
@@ -226,7 +169,7 @@
                         <section class="planner-panel accent-sky">
                             <div class="panel-heading">
                                 <div>
-                                    <h4>🗓️ Tasks for this day</h4>
+                                    <h4>Tasks for this day</h4>
                                     <p>One-off plans for the selected date.</p>
                                 </div>
                             </div>
@@ -238,6 +181,31 @@
                         </section>
                     </div>
                 </div>
+            </section>
+
+            <section id="bonusInbox" class="bonus-inbox" aria-labelledby="bonusInboxTitle">
+                <div class="bonus-inbox-heading">
+                    <div>
+                        <p class="eyebrow">Outside the daily ring</p>
+                        <h2 id="bonusInboxTitle">Bonus inbox</h2>
+                    </div>
+                    <span id="bonusSummaryMeta" class="bonus-inbox-meta">0 open</span>
+                </div>
+                <p class="bonus-inbox-hint">Extra tasks that don’t count toward the day. Completed ones clear every Monday.</p>
+                <div class="input-row bonus-add-row">
+                    <input type="text" id="taskInput" placeholder="Add a bonus task" aria-label="Add a bonus task">
+                    <input type="date" id="dueDate" aria-label="Optional due date">
+                    <button class="primary-button" type="button" onclick="addTask()">Add</button>
+                </div>
+                <div class="bonus-toolbar">
+                    <div id="filters" class="bonus-filters" role="group" aria-label="Bonus filters">
+                        <button type="button" id="filter-all" onclick="setFilter('all')">All</button>
+                        <button type="button" id="filter-active" onclick="setFilter('active')">Open</button>
+                        <button type="button" id="filter-completed" onclick="setFilter('completed')">Done</button>
+                    </div>
+                    <button type="button" class="bonus-clear-btn" onclick="clearCompleted()">Clear completed</button>
+                </div>
+                <ul id="taskList" class="bonus-task-list"></ul>
             </section>
         </section>
 

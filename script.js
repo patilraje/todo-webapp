@@ -458,13 +458,18 @@ function quickAddToday(event) {
     refreshAllViews()
 }
 
+function updateBonusSummary(remaining, total) {
+    const meta = document.getElementById("bonusSummaryMeta")
+    if (!meta) return
+    if (total === 0) {
+        meta.textContent = "empty"
+        return
+    }
+    meta.textContent = remaining === 1 ? "1 open" : `${remaining} open`
+}
+
 function renderTasks() {
     let list = document.getElementById("taskList")
-    let progressFill = document.getElementById("progressFill")
-    let progressLabel = document.getElementById("progressLabel")
-    let statTotal = document.getElementById("statTotal")
-    let statOpen = document.getElementById("statOpen")
-    let statDone = document.getElementById("statDone")
     if (!list) return
 
     list.innerHTML = ""
@@ -472,21 +477,14 @@ function renderTasks() {
     let total = tasks.length
     let completed = tasks.filter(task => task.completed).length
     let remaining = total - completed
-    let progressPercent = total === 0 ? 0 : Math.round((completed / total) * 100)
 
-    progressFill.style.width = `${progressPercent}%`
-    progressLabel.textContent = `${progressPercent}%`
-    statTotal.textContent = String(total)
-    statOpen.textContent = String(remaining)
-    statDone.textContent = String(completed)
+    updateBonusSummary(remaining, total)
 
     if (tasks.length === 0) {
         let emptyMsg = document.createElement("p")
         emptyMsg.className = "empty-filter-msg"
-        emptyMsg.textContent = "No bonus tasks yet. Add one above or from the Today tab."
+        emptyMsg.textContent = "No bonus tasks yet. Add one here or from Today."
         list.appendChild(emptyMsg)
-        document.getElementById("taskCount").textContent =
-            "0 remaining | 0 total | 0 completed"
         return
     }
 
@@ -494,11 +492,8 @@ function renderTasks() {
     if (visibleCount === 0) {
         let emptyMsg = document.createElement("p")
         emptyMsg.className = "empty-filter-msg"
-        emptyMsg.textContent =
-            "No tasks match this filter or search. Try All, Active, or clear the search."
+        emptyMsg.textContent = "Nothing in this filter. Try All or Open."
         list.appendChild(emptyMsg)
-        document.getElementById("taskCount").textContent =
-            `${remaining} remaining | ${total} total | ${completed} completed`
         return
     }
 
@@ -583,9 +578,6 @@ function renderTasks() {
         li.appendChild(deleteBtn)
         list.appendChild(li)
     })
-
-    document.getElementById("taskCount").textContent =
-        `${remaining} remaining | ${total} total | ${completed} completed`
 }
 
 function addTask() {
@@ -657,10 +649,11 @@ function toggleDarkMode() {
 
 function setFilter(filter) {
     currentFilter = filter
-    document.getElementById("filter-all").classList.remove("active-filter")
-    document.getElementById("filter-active").classList.remove("active-filter")
-    document.getElementById("filter-completed").classList.remove("active-filter")
-    document.getElementById("filter-" + filter).classList.add("active-filter")
+    ;["all", "active", "completed"].forEach(name => {
+        const button = document.getElementById("filter-" + name)
+        if (!button) return
+        button.classList.toggle("active-filter", name === filter)
+    })
     renderTasks()
 }
 
@@ -1437,6 +1430,7 @@ function renderNotes() {
     }
 }
 
-document.getElementById("filter-all").classList.add("active-filter")
+const filterAll = document.getElementById("filter-all")
+if (filterAll) filterAll.classList.add("active-filter")
 const allowedTabs = ["today", "planning", "week", "notes"]
 switchTab(allowedTabs.includes(currentTab) ? currentTab : "today")

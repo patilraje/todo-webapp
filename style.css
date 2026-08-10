@@ -231,6 +231,7 @@ body {
 .today-header,
 .selected-day-heading,
 .calendar-heading,
+.bonus-inbox-heading,
 .panel-heading,
 .progress-header {
     display: flex;
@@ -245,6 +246,7 @@ body {
 
 .today-header h2,
 .calendar-heading h2,
+.bonus-inbox-heading h2,
 .selected-day-heading h3,
 .panel-heading h4 {
     margin: 0;
@@ -653,10 +655,85 @@ body.is-reordering .task-row {
     font-weight: 700;
 }
 
-.planning-tools {
-    margin-bottom: 30px;
-    padding-bottom: 26px;
-    border-bottom: 1px dashed var(--border-strong);
+.bonus-inbox {
+    margin-top: 28px;
+    padding-top: 26px;
+    border-top: 1px dashed var(--border-strong);
+}
+
+.bonus-inbox-heading {
+    margin-bottom: 8px;
+    align-items: flex-start;
+}
+
+.bonus-inbox-heading h2 {
+    font-size: 1.25rem;
+}
+
+.bonus-inbox-meta {
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--accent);
+    background: var(--accent-soft);
+    padding: 6px 10px;
+    border-radius: 999px;
+    flex-shrink: 0;
+}
+
+.bonus-inbox-hint {
+    margin: 0 0 14px;
+    color: var(--text-muted);
+    font-size: 13px;
+}
+
+.bonus-add-row {
+    margin: 0 0 14px;
+    justify-content: stretch;
+}
+
+.bonus-add-row input[type="text"] {
+    flex: 1;
+    min-width: 140px;
+}
+
+.bonus-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 12px;
+}
+
+.bonus-filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin: 0;
+}
+
+.bonus-filters button {
+    padding: 7px 12px;
+    font-size: 13px;
+}
+
+.bonus-clear-btn {
+    padding: 7px 12px;
+    font-size: 13px;
+    color: var(--text-muted);
+    background: transparent;
+    border-color: transparent;
+}
+
+.bonus-clear-btn:hover {
+    color: var(--overdue);
+    background: rgba(239, 68, 68, 0.08);
+}
+
+.bonus-task-list {
+    margin-top: 4px;
 }
 
 .calendar-nav {
@@ -1425,6 +1502,7 @@ body.dark-mode .week-pulse {
     .selected-day-heading,
     .today-header,
     .calendar-heading,
+    .bonus-inbox-heading,
     .week-header,
     .week-hero {
         align-items: flex-start;
@@ -1471,6 +1549,15 @@ body.dark-mode .week-pulse {
     #todayQuickAdd {
         min-width: 100%;
         width: 100%;
+    }
+
+    .bonus-toolbar {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .bonus-clear-btn {
+        text-align: center;
     }
 }
 
