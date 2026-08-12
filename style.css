@@ -495,7 +495,7 @@ input[type="checkbox"]:checked::after {
 
 .task-row,
 .planner-item,
-#taskList li {
+.bonus-task-list .task-row {
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -511,7 +511,7 @@ input[type="checkbox"]:checked::after {
 
 .task-row:hover,
 .planner-item:hover,
-#taskList li:hover {
+.bonus-task-list .task-row:hover {
     transform: translateY(-2px);
     border-color: var(--group-color, var(--accent));
     box-shadow: var(--shadow-soft);
@@ -530,12 +530,12 @@ input[type="checkbox"]:checked::after {
 
 .task-row label span,
 .planner-item label span,
-#taskList li span {
+.bonus-task-list .task-row label span {
     overflow-wrap: anywhere;
     cursor: pointer;
 }
 
-#taskList {
+.bonus-task-list {
     list-style: none;
     padding: 0;
     margin: 12px 0 0;
@@ -611,6 +611,17 @@ input[type="checkbox"]:checked::after {
 .task-row.drop-target {
     border-color: var(--accent);
     box-shadow: inset 0 3px 0 var(--accent);
+}
+
+.task-drop-zone.drop-zone-active {
+    outline: 2px dashed var(--accent);
+    outline-offset: 4px;
+    border-radius: 14px;
+}
+
+.planner-list.task-drop-zone.drop-zone-active,
+.bonus-task-list.task-drop-zone.drop-zone-active {
+    min-height: 48px;
 }
 
 body.is-reordering {

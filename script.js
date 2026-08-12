@@ -92,6 +92,11 @@ function maybeCelebrateDayComplete(dateKey, previousPercent) {
     }
 }
 
+function setBonusCompletedById(taskId, completed) {
+    const index = tasks.findIndex(task => task.id === taskId)
+    setBonusCompleted(index, completed)
+}
+
 function setBonusCompleted(index, completed) {
     if (index < 0 || index >= tasks.length) return
     const wasCompleted = Boolean(tasks[index].completed)
@@ -126,6 +131,346 @@ function ensureBonusWeekReset() {
 }
 
 ensureBonusWeekReset()
+
+function generateTaskId() {
+    return `${Date.now()}-${Math.random().toString(16).slice(2)}`
+}
+
+function ensureBonusTaskIds() {
+    let changed = false
+    tasks.forEach(task => {
+        if (!task.id) {
+            task.id = generateTaskId()
+            changed = true
+        }
+    })
+    if (changed) saveTasks()
+}
+
+ensureBonusTaskIds()
+
+function clearNnCompletionsForId(itemId) {
+    Object.keys(nonNegotiableCompletions).forEach(dateKey => {
+        if (nonNegotiableCompletions[dateKey]?.[itemId] !== undefined) {
+            delete nonNegotiableCompletions[dateKey][itemId]
+        }
+    })
+}
+
+function getNonNegotiableIndex(taskId) {
+    return nonNegotiables.findIndex(item => item.id === taskId)
+}
+
+function getDayTaskIndex(dateKey, taskId) {
+    const list = dayTasks[dateKey] || []
+    return list.findIndex(task => task.id === taskId)
+}
+
+function getBonusIndex(taskId) {
+    return tasks.findIndex(task => task.id === taskId)
+}
+
+function clampInsertIndex(insertIndex, length) {
+    if (insertIndex === null || insertIndex === undefined || Number.isNaN(insertIndex)) {
+        return length
+    }
+    return Math.max(0, Math.min(insertIndex, length))
+}
+
+function reorderInArray(array, fromIndex, insertIndex) {
+    if (fromIndex < 0 || fromIndex >= array.length) return false
+    let target = insertIndex
+    if (target > fromIndex) target -= 1
+    if (target === fromIndex || target < 0) return false
+    if (target > array.length - 1) target = array.length - 1
+    const [item] = array.splice(fromIndex, 1)
+    array.splice(target, 0, item)
+    return true
+}
+
+function insertAt(array, item, insertIndex) {
+    const index = clampInsertIndex(insertIndex, array.length)
+    array.splice(index, 0, item)
+}
+
+function moveTask({
+    fromBucket,
+    toBucket,
+    taskId,
+    dateKey,
+    insertIndex,
+    dueDateOnBonus = ""
+}) {
+    if (!fromBucket || !toBucket || !taskId) return
+
+    if (fromBucket === toBucket) {
+        if (fromBucket === "nonNegotiable") {
+            const fromIndex = getNonNegotiableIndex(taskId)
+            if (reorderInArray(nonNegotiables, fromIndex, insertIndex)) {
+                savePlannerData()
+                refreshAllViews()
+            }
+            return
+        }
+        if (fromBucket === "dayTask") {
+            const list = dayTasks[dateKey] || []
+            const fromIndex = getDayTaskIndex(dateKey, taskId)
+            if (reorderInArray(list, fromIndex, insertIndex)) {
+                dayTasks[dateKey] = list
+                savePlannerData()
+                refreshAllViews()
+            }
+            return
+        }
+        if (fromBucket === "bonus") {
+            const fromIndex = getBonusIndex(taskId)
+            if (reorderInArray(tasks, fromIndex, insertIndex)) {
+                saveTasks()
+                refreshAllViews()
+            }
+        }
+        return
+    }
+
+    if (fromBucket === "nonNegotiable") {
+        const fromIndex = getNonNegotiableIndex(taskId)
+        if (fromIndex < 0) return
+        const [item] = nonNegotiables.splice(fromIndex, 1)
+        const completed = Boolean(nonNegotiableCompletions[dateKey]?.[item.id])
+        clearNnCompletionsForId(item.id)
+
+        if (toBucket === "dayTask") {
+            if (!dayTasks[dateKey]) dayTasks[dateKey] = []
+            insertAt(dayTasks[dateKey], {
+                id: item.id,
+                text: item.text,
+                completed
+            }, insertIndex)
+            savePlannerData()
+        } else if (toBucket === "bonus") {
+            insertAt(tasks, {
+                id: item.id,
+                text: item.text,
+                completed: false,
+                dueDate: ""
+            }, insertIndex)
+            saveTasks()
+            savePlannerData()
+        }
+        refreshAllViews()
+        return
+    }
+
+    if (fromBucket === "dayTask") {
+        const list = dayTasks[dateKey] || []
+        const fromIndex = getDayTaskIndex(dateKey, taskId)
+        if (fromIndex < 0) return
+        const [item] = list.splice(fromIndex, 1)
+        if (list.length === 0) delete dayTasks[dateKey]
+        else dayTasks[dateKey] = list
+
+        if (toBucket === "nonNegotiable") {
+            insertAt(nonNegotiables, { id: item.id, text: item.text }, insertIndex)
+            if (!nonNegotiableCompletions[dateKey]) {
+                nonNegotiableCompletions[dateKey] = {}
+            }
+            nonNegotiableCompletions[dateKey][item.id] = Boolean(item.completed)
+            savePlannerData()
+        } else if (toBucket === "bonus") {
+            insertAt(tasks, {
+                id: item.id,
+                text: item.text,
+                completed: Boolean(item.completed),
+                dueDate: dueDateOnBonus || ""
+            }, insertIndex)
+            saveTasks()
+            savePlannerData()
+        }
+        refreshAllViews()
+        return
+    }
+
+    if (fromBucket === "bonus") {
+        const fromIndex = getBonusIndex(taskId)
+        if (fromIndex < 0) return
+        const [item] = tasks.splice(fromIndex, 1)
+
+        if (toBucket === "dayTask") {
+            if (!dayTasks[dateKey]) dayTasks[dateKey] = []
+            insertAt(dayTasks[dateKey], {
+                id: item.id,
+                text: item.text,
+                completed: Boolean(item.completed)
+            }, insertIndex)
+            savePlannerData()
+            saveTasks()
+        } else if (toBucket === "nonNegotiable") {
+            insertAt(nonNegotiables, { id: item.id, text: item.text }, insertIndex)
+            if (!nonNegotiableCompletions[dateKey]) {
+                nonNegotiableCompletions[dateKey] = {}
+            }
+            nonNegotiableCompletions[dateKey][item.id] = Boolean(item.completed)
+            savePlannerData()
+            saveTasks()
+        }
+        refreshAllViews()
+    }
+}
+
+function setupDropZone(element, bucket, dateKey = "") {
+    if (!element) return
+    element.classList.add("task-drop-zone")
+    element.dataset.dropZone = bucket
+    if (dateKey) element.dataset.dateKey = dateKey
+}
+
+function clearDragUI() {
+    document.querySelectorAll(".task-row.drop-target").forEach(row => {
+        row.classList.remove("drop-target")
+    })
+    document.querySelectorAll(".task-drop-zone.drop-zone-active").forEach(zone => {
+        zone.classList.remove("drop-zone-active")
+    })
+}
+
+function getDraggableRows(listRoot, excludeTaskId) {
+    if (!listRoot) return []
+    return [...listRoot.querySelectorAll(".task-row[data-task-id]")].filter(
+        row => row.dataset.taskId !== excludeTaskId
+    )
+}
+
+function getVisibleInsertIndex(listRoot, clientY, excludeTaskId) {
+    const rows = getDraggableRows(listRoot, excludeTaskId)
+    for (let i = 0; i < rows.length; i += 1) {
+        const rect = rows[i].getBoundingClientRect()
+        if (clientY < rect.top + rect.height / 2) return i
+    }
+    return rows.length
+}
+
+function getBonusArrayInsertIndex(listRoot, clientY, excludeTaskId) {
+    const rows = getDraggableRows(listRoot, excludeTaskId)
+    const visibleInsert = getVisibleInsertIndex(listRoot, clientY, excludeTaskId)
+
+    const visibleIds = rows.map(row => row.dataset.taskId)
+    if (visibleInsert >= visibleIds.length) {
+        return tasks.length
+    }
+
+    const targetId = visibleIds[visibleInsert]
+    const fullIndex = tasks.findIndex(task => task.id === targetId)
+    return fullIndex >= 0 ? fullIndex : tasks.length
+}
+
+function resolveInsertIndex(dropZone, clientY, excludeTaskId, targetBucket) {
+    if (!dropZone) return 0
+    if (targetBucket === "bonus") {
+        return getBonusArrayInsertIndex(dropZone, clientY, excludeTaskId)
+    }
+    return getVisibleInsertIndex(dropZone, clientY, excludeTaskId)
+}
+
+function attachTaskDrag(handle, row, dragMeta) {
+    const DRAG_THRESHOLD = 6
+    let drag = null
+
+    handle.addEventListener("pointerdown", function(event) {
+        if (event.pointerType === "mouse" && event.button !== 0) return
+        event.preventDefault()
+        handle.setPointerCapture(event.pointerId)
+        drag = {
+            taskId: dragMeta.taskId,
+            fromBucket: dragMeta.bucket,
+            dateKey: dragMeta.dateKey,
+            dueDateOnBonus: dragMeta.dueDateOnBonus || "",
+            startY: event.clientY,
+            started: false,
+            insertIndex: null,
+            targetBucket: dragMeta.bucket,
+            targetList: row.parentElement
+        }
+    })
+
+    handle.addEventListener("pointermove", function(event) {
+        if (!drag || drag.taskId !== dragMeta.taskId) return
+        if (!drag.started) {
+            if (Math.abs(event.clientY - drag.startY) < DRAG_THRESHOLD) return
+            drag.started = true
+            row.classList.add("is-dragging")
+            document.body.classList.add("is-reordering")
+        }
+
+        clearDragUI()
+        const dropZone = document
+            .elementFromPoint(event.clientX, event.clientY)
+            ?.closest(".task-drop-zone")
+
+        if (!dropZone) return
+
+        dropZone.classList.add("drop-zone-active")
+        const targetBucket = dropZone.dataset.dropZone
+        const insertIndex = resolveInsertIndex(
+            dropZone,
+            event.clientY,
+            dragMeta.taskId,
+            targetBucket
+        )
+
+        drag.targetBucket = targetBucket
+        drag.targetList = dropZone
+        drag.insertIndex = insertIndex
+        drag.dateKey = dropZone.dataset.dateKey || dragMeta.dateKey
+
+        const rows = getDraggableRows(dropZone, dragMeta.taskId)
+        const highlightIndex = targetBucket === "bonus"
+            ? getVisibleInsertIndex(dropZone, event.clientY, dragMeta.taskId)
+            : insertIndex
+        if (highlightIndex < rows.length) {
+            rows[highlightIndex].classList.add("drop-target")
+        } else if (rows.length > 0) {
+            rows[rows.length - 1].classList.add("drop-target")
+        }
+    })
+
+    function endDrag(event) {
+        if (!drag || drag.taskId !== dragMeta.taskId) return
+        const {
+            started,
+            taskId,
+            fromBucket,
+            targetBucket,
+            insertIndex,
+            dateKey,
+            dueDateOnBonus
+        } = drag
+        drag = null
+
+        try {
+            handle.releasePointerCapture(event.pointerId)
+        } catch (error) {
+            // Pointer may already be released.
+        }
+
+        row.classList.remove("is-dragging")
+        document.body.classList.remove("is-reordering")
+        clearDragUI()
+
+        if (!started || insertIndex === null) return
+
+        moveTask({
+            fromBucket,
+            toBucket: targetBucket || fromBucket,
+            taskId,
+            dateKey,
+            insertIndex,
+            dueDateOnBonus
+        })
+    }
+
+    handle.addEventListener("pointerup", endDrag)
+    handle.addEventListener("pointercancel", endDrag)
+}
 
 function taskMatchesFilters(task) {
     if (currentFilter === "active" && task.completed) return false
@@ -198,112 +543,24 @@ function getTodayMergedProgress() {
     }
 }
 
-function reorderNonNegotiable(fromIndex, insertIndex) {
-    if (fromIndex < 0 || fromIndex >= nonNegotiables.length) return
-    if (insertIndex > fromIndex) insertIndex -= 1
-    if (insertIndex === fromIndex || insertIndex < 0) return
-    if (insertIndex > nonNegotiables.length - 1) {
-        insertIndex = nonNegotiables.length - 1
-    }
-
-    const [item] = nonNegotiables.splice(fromIndex, 1)
-    nonNegotiables.splice(insertIndex, 0, item)
-    savePlannerData()
-    refreshAllViews()
-}
-
-function clearDropTargets(listRoot) {
-    if (!listRoot) return
-    listRoot.querySelectorAll(".task-row.drop-target").forEach(row => {
-        row.classList.remove("drop-target")
-    })
-}
-
-function getNonNegotiableInsertIndex(listRoot, clientY) {
-    const rows = [...listRoot.querySelectorAll(".task-row[data-nn-id]")]
-    for (let i = 0; i < rows.length; i += 1) {
-        const rect = rows[i].getBoundingClientRect()
-        if (clientY < rect.top + rect.height / 2) return i
-    }
-    return rows.length
-}
-
-function attachNonNegotiableDrag(handle, row, itemId) {
-    const DRAG_THRESHOLD = 6
-    let drag = null
-
-    handle.addEventListener("pointerdown", function(event) {
-        if (event.pointerType === "mouse" && event.button !== 0) return
-        event.preventDefault()
-        handle.setPointerCapture(event.pointerId)
-        drag = {
-            itemId,
-            startY: event.clientY,
-            started: false,
-            fromIndex: nonNegotiables.findIndex(item => item.id === itemId),
-            insertIndex: null,
-            listRoot: row.parentElement
-        }
-    })
-
-    handle.addEventListener("pointermove", function(event) {
-        if (!drag || drag.itemId !== itemId) return
-        if (!drag.started) {
-            if (Math.abs(event.clientY - drag.startY) < DRAG_THRESHOLD) return
-            drag.started = true
-            row.classList.add("is-dragging")
-            document.body.classList.add("is-reordering")
-        }
-
-        clearDropTargets(drag.listRoot)
-        const insertIndex = getNonNegotiableInsertIndex(drag.listRoot, event.clientY)
-        drag.insertIndex = insertIndex
-
-        const rows = [...drag.listRoot.querySelectorAll(".task-row[data-nn-id]")]
-        if (insertIndex < rows.length) {
-            rows[insertIndex].classList.add("drop-target")
-        } else if (rows.length > 0) {
-            rows[rows.length - 1].classList.add("drop-target")
-        }
-    })
-
-    function endDrag(event) {
-        if (!drag || drag.itemId !== itemId) return
-        const { started, fromIndex, insertIndex, listRoot } = drag
-        drag = null
-
-        try {
-            handle.releasePointerCapture(event.pointerId)
-        } catch (error) {
-            // Pointer may already be released.
-        }
-
-        row.classList.remove("is-dragging")
-        document.body.classList.remove("is-reordering")
-        clearDropTargets(listRoot)
-
-        if (!started || insertIndex === null || fromIndex < 0) return
-        reorderNonNegotiable(fromIndex, insertIndex)
-    }
-
-    handle.addEventListener("pointerup", endDrag)
-    handle.addEventListener("pointercancel", endDrag)
-}
-
 function createTaskRow(text, completed, onToggle, onDelete, options = {}) {
     const row = document.createElement("div")
     row.className = "task-row"
 
-    if (options.reorder) {
-        row.dataset.nnId = options.reorder.itemId
+    if (options.drag) {
+        row.dataset.bucket = options.drag.bucket
+        row.dataset.taskId = options.drag.taskId
+        if (options.drag.dateKey) {
+            row.dataset.dateKey = options.drag.dateKey
+        }
 
         const handle = document.createElement("button")
         handle.type = "button"
         handle.className = "drag-handle"
         handle.textContent = "⋮⋮"
-        handle.setAttribute("aria-label", `Drag to reorder ${text}`)
-        handle.setAttribute("title", "Drag to reorder")
-        attachNonNegotiableDrag(handle, row, options.reorder.itemId)
+        handle.setAttribute("aria-label", `Drag to move ${text}`)
+        handle.setAttribute("title", "Drag to move")
+        attachTaskDrag(handle, row, options.drag)
         row.appendChild(handle)
     }
 
@@ -374,13 +631,21 @@ function appendGroup(container, title, rows, options = {}) {
     group.appendChild(head)
 
     if (rows.length === 0) {
+        const dropWrap = document.createElement("div")
+        dropWrap.className = "today-list task-drop-zone"
+        dropWrap.dataset.dropZone = options.dropZone || ""
+        if (options.dateKey) dropWrap.dataset.dateKey = options.dateKey
+
         const empty = document.createElement("p")
         empty.className = "today-empty"
         empty.textContent = options.empty || "Nothing here yet."
-        group.appendChild(empty)
+        dropWrap.appendChild(empty)
+        group.appendChild(dropWrap)
     } else {
         const stack = document.createElement("div")
-        stack.className = "today-list"
+        stack.className = "today-list task-drop-zone"
+        stack.dataset.dropZone = options.dropZone || ""
+        if (options.dateKey) stack.dataset.dateKey = options.dateKey
         rows.forEach(row => stack.appendChild(row))
         group.appendChild(stack)
     }
@@ -432,8 +697,10 @@ function renderToday() {
                 refreshAllViews()
             },
             {
-                reorder: {
-                    itemId: item.id
+                drag: {
+                    bucket: "nonNegotiable",
+                    taskId: item.id,
+                    dateKey: today
                 }
             }
         )
@@ -455,11 +722,19 @@ function renderToday() {
                 dayTasks[today] = planned.filter(current => current.id !== task.id)
                 savePlannerData()
                 refreshAllViews()
+            },
+            {
+                drag: {
+                    bucket: "dayTask",
+                    taskId: task.id,
+                    dateKey: today,
+                    dueDateOnBonus: ""
+                }
             }
         )
     )
 
-    const bonusRows = tasks.map((task, index) => {
+    const bonusRows = tasks.map(task => {
         let className = ""
         if (task.dueDate && !task.completed) {
             if (task.dueDate < today) className = "overdue"
@@ -470,16 +745,21 @@ function renderToday() {
             task.text,
             task.completed,
             function() {
-                setBonusCompleted(index, !tasks[index].completed)
+                setBonusCompletedById(task.id, !task.completed)
             },
             function() {
-                tasks.splice(index, 1)
+                tasks = tasks.filter(current => current.id !== task.id)
                 saveTasks()
                 refreshAllViews()
             },
             {
                 className,
                 meta: task.dueDate ? `(${task.dueDate})` : "",
+                drag: {
+                    bucket: "bonus",
+                    taskId: task.id,
+                    dateKey: today
+                },
                 onEdit: function(e) {
                     e.preventDefault()
                     const span = e.currentTarget
@@ -491,7 +771,7 @@ function renderToday() {
 
                     function saveEdit() {
                         const newText = input.value.trim()
-                        tasks[index].text = newText || task.text
+                        task.text = newText || task.text
                         saveTasks()
                         refreshAllViews()
                     }
@@ -508,6 +788,8 @@ function renderToday() {
     appendGroup(list, "Daily non-negotiables", recurringRows, {
         icon: "⚡",
         accent: "group-flame",
+        dropZone: "nonNegotiable",
+        dateKey: today,
         done: nonNegotiables.filter(item =>
             Boolean(nonNegotiableCompletions[today]?.[item.id])
         ).length,
@@ -516,12 +798,16 @@ function renderToday() {
     appendGroup(list, "Planned for today", plannedRows, {
         icon: "🗓️",
         accent: "group-sky",
+        dropZone: "dayTask",
+        dateKey: today,
         done: planned.filter(task => task.completed).length,
         empty: "Nothing scheduled for today yet."
     })
     appendGroup(list, "Bonus", bonusRows, {
         icon: "⭐",
         accent: "group-mint",
+        dropZone: "bonus",
+        dateKey: today,
         done: tasks.filter(task => task.completed).length,
         empty: "Extra credit for this week. Completed bonus clears every Monday."
     })
@@ -534,6 +820,7 @@ function quickAddToday(event) {
     if (!text) return
 
     tasks.push({
+        id: generateTaskId(),
         text,
         completed: false,
         dueDate: ""
@@ -557,6 +844,7 @@ function renderTasks() {
     let list = document.getElementById("taskList")
     if (!list) return
 
+    setupDropZone(list, "bonus", selectedDate)
     list.innerHTML = ""
 
     let total = tasks.length
@@ -564,6 +852,8 @@ function renderTasks() {
     let remaining = total - completed
 
     updateBonusSummary(remaining, total)
+
+    const visibleTasks = tasks.filter(taskMatchesFilters)
 
     if (tasks.length === 0) {
         let emptyMsg = document.createElement("p")
@@ -573,8 +863,7 @@ function renderTasks() {
         return
     }
 
-    const visibleCount = tasks.filter(taskMatchesFilters).length
-    if (visibleCount === 0) {
+    if (visibleTasks.length === 0) {
         let emptyMsg = document.createElement("p")
         emptyMsg.className = "empty-filter-msg"
         emptyMsg.textContent = "Nothing in this filter. Try All or Open."
@@ -582,84 +871,56 @@ function renderTasks() {
         return
     }
 
-    tasks.forEach((task, index) => {
-        if (!taskMatchesFilters(task)) return
-
-        let li = document.createElement("li")
-
-        let checkbox = document.createElement("input")
-        checkbox.type = "checkbox"
-        checkbox.checked = task.completed
-        checkbox.onchange = function() {
-            setBonusCompleted(index, checkbox.checked)
-        }
-
-        let span = document.createElement("span")
-        span.textContent = task.text
-        span.style.flex = "1"
-        span.style.cursor = "pointer"
-        span.style.userSelect = "none"
-
-        if (task.completed) {
-            span.classList.add("completed")
-        }
-
+    visibleTasks.forEach(task => {
+        let className = ""
+        const today = todayLocalISO()
         if (task.dueDate && !task.completed) {
-            const today = todayLocalISO()
-            if (task.dueDate < today) {
-                span.classList.add("overdue")
-            } else if (task.dueDate === today) {
-                span.classList.add("due-today")
-            }
+            if (task.dueDate < today) className = "overdue"
+            else if (task.dueDate === today) className = "due-today"
         }
 
-        let dateSpan = document.createElement("small")
-        if (task.dueDate) {
-            dateSpan.textContent = " (" + task.dueDate + ")"
-            dateSpan.style.marginLeft = "10px"
-        }
-
-        span.addEventListener("dblclick", function(e) {
-            e.preventDefault()
-
-            let input = document.createElement("input")
-            input.type = "text"
-            input.value = task.text
-
-            span.replaceWith(input)
-            input.focus()
-
-            function saveEdit() {
-                let newText = input.value.trim()
-                tasks[index].text = newText || task.text
+        list.appendChild(createTaskRow(
+            task.text,
+            task.completed,
+            function() {
+                setBonusCompletedById(task.id, !task.completed)
+            },
+            function() {
+                tasks = tasks.filter(current => current.id !== task.id)
                 saveTasks()
                 refreshAllViews()
-            }
+            },
+            {
+                className,
+                meta: task.dueDate ? `(${task.dueDate})` : "",
+                drag: {
+                    bucket: "bonus",
+                    taskId: task.id,
+                    dateKey: selectedDate
+                },
+                onEdit: function(e) {
+                    e.preventDefault()
+                    const span = e.currentTarget
+                    const input = document.createElement("input")
+                    input.type = "text"
+                    input.value = task.text
+                    span.replaceWith(input)
+                    input.focus()
 
-            input.addEventListener("keydown", function(event) {
-                if (event.key === "Enter") {
-                    saveEdit()
+                    function saveEdit() {
+                        const newText = input.value.trim()
+                        task.text = newText || task.text
+                        saveTasks()
+                        refreshAllViews()
+                    }
+
+                    input.addEventListener("keydown", function(event) {
+                        if (event.key === "Enter") saveEdit()
+                    })
+                    input.addEventListener("blur", saveEdit)
                 }
-            })
-
-            input.addEventListener("blur", saveEdit)
-        })
-
-        let deleteBtn = document.createElement("button")
-        deleteBtn.type = "button"
-        deleteBtn.className = "icon-button"
-        deleteBtn.textContent = "×"
-        deleteBtn.onclick = function() {
-            tasks.splice(index, 1)
-            saveTasks()
-            refreshAllViews()
-        }
-
-        li.appendChild(checkbox)
-        li.appendChild(span)
-        li.appendChild(dateSpan)
-        li.appendChild(deleteBtn)
-        list.appendChild(li)
+            }
+        ))
     })
 }
 
@@ -675,6 +936,7 @@ function addTask() {
     if (text === "") return
 
     tasks.push({
+        id: generateTaskId(),
         text: text,
         completed: false,
         dueDate: dueDate
@@ -869,6 +1131,8 @@ function renderSelectedDay() {
     progressLabel.textContent = `${progress.percent}% complete`
     recurringList.innerHTML = ""
     specificList.innerHTML = ""
+    setupDropZone(recurringList, "nonNegotiable", selectedDate)
+    setupDropZone(specificList, "dayTask", selectedDate)
 
     if (nonNegotiables.length === 0) {
         recurringList.appendChild(createPlannerEmpty("Add your first daily must-do above."))
@@ -898,8 +1162,10 @@ function renderSelectedDay() {
                     refreshAllViews()
                 },
                 {
-                    reorder: {
-                        itemId: item.id
+                    drag: {
+                        bucket: "nonNegotiable",
+                        taskId: item.id,
+                        dateKey: selectedDate
                     }
                 }
             ))
@@ -927,6 +1193,14 @@ function renderSelectedDay() {
                     )
                     savePlannerData()
                     refreshAllViews()
+                },
+                {
+                    drag: {
+                        bucket: "dayTask",
+                        taskId: task.id,
+                        dateKey: selectedDate,
+                        dueDateOnBonus: selectedDate
+                    }
                 }
             ))
         })
