@@ -149,6 +149,50 @@ function ensureBonusTaskIds() {
 
 ensureBonusTaskIds()
 
+function yesterdayLocalISO() {
+    const d = new Date()
+    d.setDate(d.getDate() - 1)
+    const y = d.getFullYear()
+    const m = String(d.getMonth() + 1).padStart(2, "0")
+    const day = String(d.getDate()).padStart(2, "0")
+    return `${y}-${m}-${day}`
+}
+
+function ensureNonNegotiableDates() {
+    let changed = false
+    nonNegotiables.forEach(item => {
+        if (!item.startDate) {
+            item.startDate = "1970-01-01"
+            changed = true
+        }
+        if (item.endDate === undefined) {
+            item.endDate = null
+            changed = true
+        }
+    })
+    if (changed) savePlannerData()
+}
+
+function isNonNegotiableActiveOnDate(item, dateKey) {
+    const start = item.startDate || "1970-01-01"
+    if (dateKey < start) return false
+    if (item.endDate && dateKey > item.endDate) return false
+    return true
+}
+
+function getNonNegotiablesForDate(dateKey) {
+    return nonNegotiables.filter(item => isNonNegotiableActiveOnDate(item, dateKey))
+}
+
+function clearNnCompletionsFromDate(itemId, fromDateKey) {
+    Object.keys(nonNegotiableCompletions).forEach(dateKey => {
+        if (dateKey < fromDateKey) return
+        if (nonNegotiableCompletions[dateKey]?.[itemId] !== undefined) {
+            delete nonNegotiableCompletions[dateKey][itemId]
+        }
+    })
+}
+
 function clearNnCompletionsForId(itemId) {
     Object.keys(nonNegotiableCompletions).forEach(dateKey => {
         if (nonNegotiableCompletions[dateKey]?.[itemId] !== undefined) {
@@ -156,6 +200,110 @@ function clearNnCompletionsForId(itemId) {
         }
     })
 }
+
+function getFullIndexForActiveInsert(insertIndex, dateKey = todayLocalISO()) {
+    const activeIndices = []
+    nonNegotiables.forEach((item, index) => {
+        if (isNonNegotiableActiveOnDate(item, dateKey)) activeIndices.push(index)
+    })
+    if (insertIndex >= activeIndices.length) {
+        if (activeIndices.length === 0) return nonNegotiables.length
+        return activeIndices[activeIndices.length - 1] + 1
+    }
+    return activeIndices[Math.max(0, insertIndex)]
+}
+
+function reorderActiveNonNegotiables(taskId, insertIndex) {
+    const today = todayLocalISO()
+    const activeIndices = []
+    nonNegotiables.forEach((item, index) => {
+        if (isNonNegotiableActiveOnDate(item, today)) activeIndices.push(index)
+    })
+    const fromActive = activeIndices.findIndex(
+        index => nonNegotiables[index].id === taskId
+    )
+    if (fromActive < 0) return false
+    const activeItems = activeIndices.map(index => nonNegotiables[index])
+    if (!reorderInArray(activeItems, fromActive, insertIndex)) return false
+    activeIndices.forEach((arrayIndex, j) => {
+        nonNegotiables[arrayIndex] = activeItems[j]
+    })
+    return true
+}
+
+function endNonNegotiableFromToday(taskId) {
+    const today = todayLocalISO()
+    const index = getNonNegotiableIndex(taskId)
+    if (index < 0) return null
+    const item = nonNegotiables[index]
+    const start = item.startDate || "1970-01-01"
+
+    if (start >= today) {
+        nonNegotiables.splice(index, 1)
+        clearNnCompletionsFromDate(taskId, today)
+        return item
+    }
+
+    item.endDate = yesterdayLocalISO()
+    clearNnCompletionsFromDate(taskId, today)
+    return item
+}
+
+function deleteNonNegotiableFromToday(taskId) {
+    const today = todayLocalISO()
+    const item = nonNegotiables[getNonNegotiableIndex(taskId)]
+    if (!item || !isNonNegotiableActiveOnDate(item, today)) return
+    endNonNegotiableFromToday(taskId)
+    savePlannerData()
+    refreshAllViews()
+}
+
+function renameNonNegotiableFromToday(taskId, newText) {
+    const today = todayLocalISO()
+    const index = getNonNegotiableIndex(taskId)
+    if (index < 0) return
+    const item = nonNegotiables[index]
+    if (!isNonNegotiableActiveOnDate(item, today)) return
+    if (item.text === newText) return
+
+    const start = item.startDate || "1970-01-01"
+    if (start >= today) {
+        item.text = newText
+        if (!item.startDate) item.startDate = today
+        item.endDate = null
+        savePlannerData()
+        refreshAllViews()
+        return
+    }
+
+    item.endDate = yesterdayLocalISO()
+    clearNnCompletionsFromDate(taskId, today)
+    nonNegotiables.splice(index + 1, 0, {
+        id: generateTaskId(),
+        text: newText,
+        startDate: today,
+        endDate: null
+    })
+    savePlannerData()
+    refreshAllViews()
+}
+
+function createNonNegotiable(text, insertIndex = null) {
+    const today = todayLocalISO()
+    const item = {
+        id: generateTaskId(),
+        text,
+        startDate: today,
+        endDate: null
+    }
+    if (insertIndex === null || insertIndex === undefined) {
+        nonNegotiables.push(item)
+    } else {
+        nonNegotiables.splice(getFullIndexForActiveInsert(insertIndex, today), 0, item)
+    }
+}
+
+ensureNonNegotiableDates()
 
 function getNonNegotiableIndex(taskId) {
     return nonNegotiables.findIndex(item => item.id === taskId)
@@ -205,8 +353,7 @@ function moveTask({
 
     if (fromBucket === toBucket) {
         if (fromBucket === "nonNegotiable") {
-            const fromIndex = getNonNegotiableIndex(taskId)
-            if (reorderInArray(nonNegotiables, fromIndex, insertIndex)) {
+            if (reorderActiveNonNegotiables(taskId, insertIndex)) {
                 savePlannerData()
                 refreshAllViews()
             }
@@ -235,22 +382,27 @@ function moveTask({
     if (fromBucket === "nonNegotiable") {
         const fromIndex = getNonNegotiableIndex(taskId)
         if (fromIndex < 0) return
-        const [item] = nonNegotiables.splice(fromIndex, 1)
+        const item = nonNegotiables[fromIndex]
         const completed = Boolean(nonNegotiableCompletions[dateKey]?.[item.id])
-        clearNnCompletionsForId(item.id)
+        const moved = {
+            id: item.id,
+            text: item.text,
+            completed
+        }
+        endNonNegotiableFromToday(taskId)
 
         if (toBucket === "dayTask") {
             if (!dayTasks[dateKey]) dayTasks[dateKey] = []
             insertAt(dayTasks[dateKey], {
-                id: item.id,
-                text: item.text,
-                completed
+                id: moved.id,
+                text: moved.text,
+                completed: moved.completed
             }, insertIndex)
             savePlannerData()
         } else if (toBucket === "bonus") {
             insertAt(tasks, {
-                id: item.id,
-                text: item.text,
+                id: moved.id,
+                text: moved.text,
                 completed: false,
                 dueDate: ""
             }, insertIndex)
@@ -270,7 +422,14 @@ function moveTask({
         else dayTasks[dateKey] = list
 
         if (toBucket === "nonNegotiable") {
-            insertAt(nonNegotiables, { id: item.id, text: item.text }, insertIndex)
+            const today = todayLocalISO()
+            const nnItem = {
+                id: item.id,
+                text: item.text,
+                startDate: today,
+                endDate: null
+            }
+            nonNegotiables.splice(getFullIndexForActiveInsert(insertIndex, today), 0, nnItem)
             if (!nonNegotiableCompletions[dateKey]) {
                 nonNegotiableCompletions[dateKey] = {}
             }
@@ -305,7 +464,14 @@ function moveTask({
             savePlannerData()
             saveTasks()
         } else if (toBucket === "nonNegotiable") {
-            insertAt(nonNegotiables, { id: item.id, text: item.text }, insertIndex)
+            const today = todayLocalISO()
+            const nnItem = {
+                id: item.id,
+                text: item.text,
+                startDate: today,
+                endDate: null
+            }
+            nonNegotiables.splice(getFullIndexForActiveInsert(insertIndex, today), 0, nnItem)
             if (!nonNegotiableCompletions[dateKey]) {
                 nonNegotiableCompletions[dateKey] = {}
             }
@@ -529,11 +695,12 @@ function refreshAllViews() {
 function getTodayMergedProgress() {
     const today = todayLocalISO()
     const planned = dayTasks[today] || []
-    const recurringDone = nonNegotiables.filter(item =>
+    const recurring = getNonNegotiablesForDate(today)
+    const recurringDone = recurring.filter(item =>
         Boolean(nonNegotiableCompletions[today]?.[item.id])
     ).length
     const plannedDone = planned.filter(task => task.completed).length
-    const total = nonNegotiables.length + planned.length
+    const total = recurring.length + planned.length
     const completed = recurringDone + plannedDone
 
     return {
@@ -541,6 +708,49 @@ function getTodayMergedProgress() {
         completed,
         percent: total === 0 ? 0 : Math.round((completed / total) * 100)
     }
+}
+
+function beginInlineEdit(span, currentText, onSave) {
+    if (!span || span.dataset.editing === "1") return
+
+    const input = document.createElement("input")
+    input.type = "text"
+    input.className = "inline-edit-input"
+    input.value = currentText
+    input.setAttribute("aria-label", "Edit task")
+    span.dataset.editing = "1"
+    span.replaceWith(input)
+    input.focus()
+    input.select()
+
+    let finished = false
+
+    function finish(save) {
+        if (finished) return
+        finished = true
+        if (save) {
+            const next = input.value.trim()
+            onSave(next || currentText)
+            return
+        }
+        const restored = document.createElement("span")
+        restored.textContent = currentText
+        if (span.className) restored.className = span.className
+        input.replaceWith(restored)
+    }
+
+    input.addEventListener("keydown", function(event) {
+        if (event.key === "Enter") {
+            event.preventDefault()
+            finish(true)
+        } else if (event.key === "Escape") {
+            event.preventDefault()
+            finish(false)
+        }
+    })
+    input.addEventListener("blur", function() {
+        finish(true)
+    })
 }
 
 function createTaskRow(text, completed, onToggle, onDelete, options = {}) {
@@ -574,8 +784,13 @@ function createTaskRow(text, completed, onToggle, onDelete, options = {}) {
     taskText.textContent = text
     if (completed) taskText.classList.add("completed")
     if (options.className) taskText.classList.add(options.className)
-    if (options.onEdit) {
-        taskText.addEventListener("dblclick", options.onEdit)
+    if (options.onSaveText) {
+        taskText.title = "Double-click to edit"
+        taskText.addEventListener("dblclick", function(event) {
+            event.preventDefault()
+            event.stopPropagation()
+            beginInlineEdit(taskText, text, options.onSaveText)
+        })
     }
 
     label.append(checkbox, taskText)
@@ -676,7 +891,8 @@ function renderToday() {
 
     list.innerHTML = ""
 
-    const recurringRows = nonNegotiables.map(item => {
+    const activeNonNegotiables = getNonNegotiablesForDate(today)
+    const recurringRows = activeNonNegotiables.map(item => {
         const completed = Boolean(nonNegotiableCompletions[today]?.[item.id])
         return createTaskRow(
             item.text,
@@ -692,15 +908,16 @@ function renderToday() {
                 maybeCelebrateDayComplete(today, previousPercent)
             },
             function() {
-                nonNegotiables = nonNegotiables.filter(current => current.id !== item.id)
-                savePlannerData()
-                refreshAllViews()
+                deleteNonNegotiableFromToday(item.id)
             },
             {
                 drag: {
                     bucket: "nonNegotiable",
                     taskId: item.id,
                     dateKey: today
+                },
+                onSaveText: function(newText) {
+                    renameNonNegotiableFromToday(item.id, newText)
                 }
             }
         )
@@ -729,6 +946,11 @@ function renderToday() {
                     taskId: task.id,
                     dateKey: today,
                     dueDateOnBonus: ""
+                },
+                onSaveText: function(newText) {
+                    task.text = newText
+                    savePlannerData()
+                    refreshAllViews()
                 }
             }
         )
@@ -760,26 +982,10 @@ function renderToday() {
                     taskId: task.id,
                     dateKey: today
                 },
-                onEdit: function(e) {
-                    e.preventDefault()
-                    const span = e.currentTarget
-                    const input = document.createElement("input")
-                    input.type = "text"
-                    input.value = task.text
-                    span.replaceWith(input)
-                    input.focus()
-
-                    function saveEdit() {
-                        const newText = input.value.trim()
-                        task.text = newText || task.text
-                        saveTasks()
-                        refreshAllViews()
-                    }
-
-                    input.addEventListener("keydown", function(event) {
-                        if (event.key === "Enter") saveEdit()
-                    })
-                    input.addEventListener("blur", saveEdit)
+                onSaveText: function(newText) {
+                    task.text = newText
+                    saveTasks()
+                    refreshAllViews()
                 }
             }
         )
@@ -790,7 +996,7 @@ function renderToday() {
         accent: "group-flame",
         dropZone: "nonNegotiable",
         dateKey: today,
-        done: nonNegotiables.filter(item =>
+        done: activeNonNegotiables.filter(item =>
             Boolean(nonNegotiableCompletions[today]?.[item.id])
         ).length,
         empty: "Add your daily must-dos from the Planning tab."
@@ -898,26 +1104,10 @@ function renderTasks() {
                     taskId: task.id,
                     dateKey: selectedDate
                 },
-                onEdit: function(e) {
-                    e.preventDefault()
-                    const span = e.currentTarget
-                    const input = document.createElement("input")
-                    input.type = "text"
-                    input.value = task.text
-                    span.replaceWith(input)
-                    input.focus()
-
-                    function saveEdit() {
-                        const newText = input.value.trim()
-                        task.text = newText || task.text
-                        saveTasks()
-                        refreshAllViews()
-                    }
-
-                    input.addEventListener("keydown", function(event) {
-                        if (event.key === "Enter") saveEdit()
-                    })
-                    input.addEventListener("blur", saveEdit)
+                onSaveText: function(newText) {
+                    task.text = newText
+                    saveTasks()
+                    refreshAllViews()
                 }
             }
         ))
@@ -1035,11 +1225,12 @@ function savePlannerData() {
 
 function getDayProgress(dateKey) {
     const specificTasks = dayTasks[dateKey] || []
-    const recurringDone = nonNegotiables.filter(item =>
+    const recurring = getNonNegotiablesForDate(dateKey)
+    const recurringDone = recurring.filter(item =>
         Boolean(nonNegotiableCompletions[dateKey]?.[item.id])
     ).length
     const specificDone = specificTasks.filter(task => task.completed).length
-    const total = nonNegotiables.length + specificTasks.length
+    const total = recurring.length + specificTasks.length
     const completed = recurringDone + specificDone
 
     return {
@@ -1134,10 +1325,11 @@ function renderSelectedDay() {
     setupDropZone(recurringList, "nonNegotiable", selectedDate)
     setupDropZone(specificList, "dayTask", selectedDate)
 
-    if (nonNegotiables.length === 0) {
+    const activeNonNegotiables = getNonNegotiablesForDate(selectedDate)
+    if (activeNonNegotiables.length === 0) {
         recurringList.appendChild(createPlannerEmpty("Add your first daily must-do above."))
     } else {
-        nonNegotiables.forEach(item => {
+        activeNonNegotiables.forEach(item => {
             const completed = Boolean(
                 nonNegotiableCompletions[selectedDate]?.[item.id]
             )
@@ -1155,17 +1347,16 @@ function renderSelectedDay() {
                     maybeCelebrateDayComplete(selectedDate, previousPercent)
                 },
                 function() {
-                    nonNegotiables = nonNegotiables.filter(
-                        current => current.id !== item.id
-                    )
-                    savePlannerData()
-                    refreshAllViews()
+                    deleteNonNegotiableFromToday(item.id)
                 },
                 {
                     drag: {
                         bucket: "nonNegotiable",
                         taskId: item.id,
                         dateKey: selectedDate
+                    },
+                    onSaveText: function(newText) {
+                        renameNonNegotiableFromToday(item.id, newText)
                     }
                 }
             ))
@@ -1200,6 +1391,11 @@ function renderSelectedDay() {
                         taskId: task.id,
                         dateKey: selectedDate,
                         dueDateOnBonus: selectedDate
+                    },
+                    onSaveText: function(newText) {
+                        task.text = newText
+                        savePlannerData()
+                        refreshAllViews()
                     }
                 }
             ))
@@ -1220,10 +1416,7 @@ function addNonNegotiable(event) {
     const text = input.value.trim()
     if (!text) return
 
-    nonNegotiables.push({
-        id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
-        text
-    })
+    createNonNegotiable(text)
     input.value = ""
     savePlannerData()
     refreshAllViews()
