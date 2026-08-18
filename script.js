@@ -490,6 +490,13 @@ function setupDropZone(element, bucket, dateKey = "") {
     if (dateKey) element.dataset.dateKey = dateKey
 }
 
+function clearRowShifts() {
+    document.querySelectorAll(".task-row.is-shifting").forEach(row => {
+        row.classList.remove("is-shifting")
+        row.style.transform = ""
+    })
+}
+
 function clearDragUI() {
     document.querySelectorAll(".task-row.drop-target").forEach(row => {
         row.classList.remove("drop-target")
@@ -497,6 +504,25 @@ function clearDragUI() {
     document.querySelectorAll(".task-drop-zone.drop-zone-active").forEach(zone => {
         zone.classList.remove("drop-zone-active")
     })
+    clearRowShifts()
+}
+
+function getTranslateY(element) {
+    const transform = getComputedStyle(element).transform
+    if (!transform || transform === "none") return 0
+    const match = transform.match(/matrix\((.+)\)/)
+    if (!match) return 0
+    const parts = match[1].split(",")
+    return Number(parts[5]) || 0
+}
+
+function getUntransformedTop(element) {
+    return element.getBoundingClientRect().top - getTranslateY(element)
+}
+
+function getRowGap(listRoot) {
+    const style = getComputedStyle(listRoot)
+    return Number.parseFloat(style.rowGap || style.gap) || 0
 }
 
 function getDraggableRows(listRoot, excludeTaskId) {
@@ -509,10 +535,36 @@ function getDraggableRows(listRoot, excludeTaskId) {
 function getVisibleInsertIndex(listRoot, clientY, excludeTaskId) {
     const rows = getDraggableRows(listRoot, excludeTaskId)
     for (let i = 0; i < rows.length; i += 1) {
-        const rect = rows[i].getBoundingClientRect()
-        if (clientY < rect.top + rect.height / 2) return i
+        const top = getUntransformedTop(rows[i])
+        const mid = top + rows[i].offsetHeight / 2
+        if (clientY < mid) return i
     }
     return rows.length
+}
+
+function applyLiveReorderShift(dropZone, draggedRow, draggedId, insertAmongRemaining) {
+    const allRows = [...dropZone.querySelectorAll(".task-row[data-task-id]")]
+    const fromIndex = allRows.findIndex(row => row.dataset.taskId === draggedId)
+    const remaining = allRows.filter(row => row !== draggedRow)
+    const height = draggedRow.offsetHeight + getRowGap(dropZone)
+
+    remaining.forEach((row, index) => {
+        const originalIndex = allRows.indexOf(row)
+        let shift = 0
+        if (fromIndex >= 0 && originalIndex > fromIndex) {
+            shift -= height
+        }
+        if (index >= insertAmongRemaining) {
+            shift += height
+        }
+        if (shift) {
+            row.classList.add("is-shifting")
+            row.style.transform = `translateY(${shift}px)`
+        } else {
+            row.classList.remove("is-shifting")
+            row.style.transform = ""
+        }
+    })
 }
 
 function getBonusArrayInsertIndex(listRoot, clientY, excludeTaskId) {
@@ -563,11 +615,19 @@ function attachTaskDrag(handle, row, dragMeta) {
         if (!drag.started) {
             if (Math.abs(event.clientY - drag.startY) < DRAG_THRESHOLD) return
             drag.started = true
+            closeTaskMenus()
             row.classList.add("is-dragging")
             document.body.classList.add("is-reordering")
         }
 
-        clearDragUI()
+        document.querySelectorAll(".task-row.drop-target").forEach(target => {
+            target.classList.remove("drop-target")
+        })
+        document.querySelectorAll(".task-drop-zone.drop-zone-active").forEach(zone => {
+            zone.classList.remove("drop-zone-active")
+        })
+        clearRowShifts()
+
         const dropZone = document
             .elementFromPoint(event.clientX, event.clientY)
             ?.closest(".task-drop-zone")
@@ -582,21 +642,18 @@ function attachTaskDrag(handle, row, dragMeta) {
             dragMeta.taskId,
             targetBucket
         )
+        const highlightIndex = getVisibleInsertIndex(
+            dropZone,
+            event.clientY,
+            dragMeta.taskId
+        )
 
         drag.targetBucket = targetBucket
         drag.targetList = dropZone
         drag.insertIndex = insertIndex
         drag.dateKey = dropZone.dataset.dateKey || dragMeta.dateKey
 
-        const rows = getDraggableRows(dropZone, dragMeta.taskId)
-        const highlightIndex = targetBucket === "bonus"
-            ? getVisibleInsertIndex(dropZone, event.clientY, dragMeta.taskId)
-            : insertIndex
-        if (highlightIndex < rows.length) {
-            rows[highlightIndex].classList.add("drop-target")
-        } else if (rows.length > 0) {
-            rows[rows.length - 1].classList.add("drop-target")
-        }
+        applyLiveReorderShift(dropZone, row, dragMeta.taskId, highlightIndex)
     })
 
     function endDrag(event) {
@@ -710,6 +767,15 @@ function getTodayMergedProgress() {
     }
 }
 
+function closeTaskMenus(exceptWrap = null) {
+    document.querySelectorAll(".task-menu-wrap.is-open").forEach(wrap => {
+        if (wrap === exceptWrap) return
+        wrap.classList.remove("is-open")
+        const button = wrap.querySelector(".task-menu-button")
+        if (button) button.setAttribute("aria-expanded", "false")
+    })
+}
+
 function beginInlineEdit(span, currentText, onSave) {
     if (!span || span.dataset.editing === "1") return
 
@@ -784,14 +850,6 @@ function createTaskRow(text, completed, onToggle, onDelete, options = {}) {
     taskText.textContent = text
     if (completed) taskText.classList.add("completed")
     if (options.className) taskText.classList.add(options.className)
-    if (options.onSaveText) {
-        taskText.title = "Double-click to edit"
-        taskText.addEventListener("dblclick", function(event) {
-            event.preventDefault()
-            event.stopPropagation()
-            beginInlineEdit(taskText, text, options.onSaveText)
-        })
-    }
 
     label.append(checkbox, taskText)
 
@@ -802,14 +860,64 @@ function createTaskRow(text, completed, onToggle, onDelete, options = {}) {
         label.appendChild(meta)
     }
 
+    const actions = document.createElement("div")
+    actions.className = "task-row-actions"
+
+    if (options.onSaveText) {
+        const menuWrap = document.createElement("div")
+        menuWrap.className = "task-menu-wrap"
+
+        const menuButton = document.createElement("button")
+        menuButton.type = "button"
+        menuButton.className = "task-menu-button"
+        menuButton.textContent = "⋯"
+        menuButton.setAttribute("aria-label", `More actions for ${text}`)
+        menuButton.setAttribute("aria-haspopup", "true")
+        menuButton.setAttribute("aria-expanded", "false")
+
+        const menu = document.createElement("div")
+        menu.className = "task-menu"
+        menu.setAttribute("role", "menu")
+
+        const editItem = document.createElement("button")
+        editItem.type = "button"
+        editItem.className = "task-menu-item"
+        editItem.setAttribute("role", "menuitem")
+        editItem.textContent = "Edit"
+        editItem.addEventListener("click", function(event) {
+            event.preventDefault()
+            event.stopPropagation()
+            closeTaskMenus()
+            beginInlineEdit(taskText, text, options.onSaveText)
+        })
+
+        menu.appendChild(editItem)
+        menuWrap.append(menuButton, menu)
+        menuWrap.addEventListener("click", function(event) {
+            event.stopPropagation()
+        })
+
+        menuButton.addEventListener("click", function(event) {
+            event.preventDefault()
+            event.stopPropagation()
+            const willOpen = !menuWrap.classList.contains("is-open")
+            closeTaskMenus(willOpen ? menuWrap : null)
+            menuWrap.classList.toggle("is-open", willOpen)
+            menuButton.setAttribute("aria-expanded", String(willOpen))
+        })
+
+        actions.appendChild(menuWrap)
+    }
+
     const deleteButton = document.createElement("button")
     deleteButton.type = "button"
     deleteButton.className = "icon-button"
     deleteButton.textContent = "×"
     deleteButton.setAttribute("aria-label", `Delete ${text}`)
     deleteButton.addEventListener("click", onDelete)
+    actions.appendChild(deleteButton)
 
-    row.append(label, deleteButton)
+    row.append(label, actions)
     return row
 }
 
@@ -1145,6 +1253,14 @@ document.addEventListener("DOMContentLoaded", function() {
             addTask()
         }
     })
+})
+
+document.addEventListener("click", function() {
+    closeTaskMenus()
+})
+
+document.addEventListener("keydown", function(event) {
+    if (event.key === "Escape") closeTaskMenus()
 })
 
 function saveTasks() {

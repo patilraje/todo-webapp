@@ -616,6 +616,8 @@ input[type="checkbox"]:checked::after {
     opacity: 0.55;
     border-color: var(--accent);
     box-shadow: var(--shadow-soft);
+    position: relative;
+    z-index: 2;
 }
 
 .task-row.drop-target {
@@ -634,12 +636,97 @@ input[type="checkbox"]:checked::after {
     min-height: 48px;
 }
 
+.task-row-actions {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    flex-shrink: 0;
+}
+
+.task-menu-wrap {
+    position: relative;
+}
+
+.task-menu-button {
+    flex: 0 0 auto;
+    width: 28px;
+    height: 36px;
+    padding: 0;
+    display: grid;
+    place-items: center;
+    border: none;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--text-muted);
+    font-size: 18px;
+    line-height: 1;
+    cursor: pointer;
+    box-shadow: none;
+}
+
+.task-menu-button:hover {
+    transform: none;
+    box-shadow: none;
+    color: var(--text);
+    background: var(--accent-soft);
+}
+
+.task-menu {
+    position: absolute;
+    top: calc(100% + 4px);
+    right: 0;
+    z-index: 12;
+    display: none;
+    min-width: 112px;
+    padding: 6px;
+    background: var(--surface-solid);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    box-shadow: var(--shadow-soft);
+}
+
+.task-menu-wrap.is-open .task-menu {
+    display: block;
+}
+
+.task-menu-item {
+    display: block;
+    width: 100%;
+    text-align: left;
+    padding: 8px 10px;
+    border: none;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--text);
+    font-size: 13px;
+    font-weight: 600;
+    box-shadow: none;
+}
+
+.task-menu-item:hover {
+    transform: none;
+    background: var(--accent-soft);
+    color: var(--accent);
+    box-shadow: none;
+}
+
 body.is-reordering {
     cursor: grabbing;
     user-select: none;
 }
 
-body.is-reordering .task-row {
+body.is-reordering .task-row:hover,
+body.is-reordering .planner-item:hover,
+body.is-reordering .bonus-task-list .task-row:hover {
+    transform: none;
+    box-shadow: 0 2px 6px rgba(46, 41, 99, 0.04);
+}
+
+body.is-reordering .task-row.is-shifting {
+    transition: transform 0.16s ease;
+}
+
+body.is-reordering .task-row.is-dragging {
     transition: none;
 }
 
